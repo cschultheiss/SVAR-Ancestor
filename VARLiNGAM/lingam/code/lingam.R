@@ -21,13 +21,13 @@
 #
 # See also ESTIMATE, PRUNE.
 
-lingam <- function( X ) {
+lingam <- function( X, verbose = FALSE) {
 
-  temp <- estimate( X )
+  temp <- estimate( X, verbose = verbose )
 #   print(temp$k)
 #   k <- c(2,1,4,3,6,5) for macro-data application
 #   print(k)
-  res <- prune( X, temp$k )
+  res <- prune( X, temp$k, verbose = verbose )
 
   res$k <- temp$k
 #   res$W <- temp$W

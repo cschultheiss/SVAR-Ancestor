@@ -17,7 +17,7 @@
 #
 # See also ESTIMATE, LINGAM.
 
-prune <- function( X, k ) {
+prune <- function( X, k, verbose = FALSE) {
 
   # ---------------------------------------------------------------------------
   # Default values for parameters
@@ -37,7 +37,7 @@ prune <- function( X, k ) {
   # Pruning
   # ---------------------------------------------------------------------------
 
-  cat('Pruning the network connections...\n')
+  if(verbose) cat('Pruning the network connections...\n')
   dims <- nrow(X)
   ndata <- ncol(X)
 
@@ -153,7 +153,7 @@ prune <- function( X, k ) {
     stop('Not implemented yet!')
   }
 
-  cat('Done!\n')
+  if(verbose) cat('Done!\n')
 
   # Return the result
   res <- list()

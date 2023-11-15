@@ -1,4 +1,4 @@
-tsdata2canonicalform <- function(X,nlags=1) {
+tsdata2canonicalform <- function(X,nlags=1, verbose = FALSE) {
 
   # INPUT
   # X: timeseries data matrix with:
@@ -43,7 +43,7 @@ tsdata2canonicalform <- function(X,nlags=1) {
     temp <- t(X[c((i-1):(i-nlags),i),])
     dim(temp) <- c(1,nvar*(nlags+1))
     data[i-nlags,] <- c(1,i-nlags,temp) # id, time point, past & current values
-    if (i%%1000==0) cat(i, 'out of', dims[1], '\n')
+    if (i%%1000==0 && verbose) cat(i, 'out of', dims[1], '\n')
   } # end for i
 
   # get labels for colnames

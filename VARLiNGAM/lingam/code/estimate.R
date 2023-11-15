@@ -24,7 +24,7 @@
 #
 # See also PRUNE, LINGAM.
 
-estimate <- function( X ) {
+estimate <- function( X, verbose = FALSE ) {
 
   # Using the fastICA R package so make sure it is loaded
   library('fastICA')
@@ -35,29 +35,29 @@ estimate <- function( X ) {
   #A <- solve(W) # mixing matrix
   ICs <- icares$S
   
-  print(W)
+  if(verbose) print(W)
 
-  print('Test for Gaussianity of the independent components')
-  print(Gauss_Tests(ICs))
+  if(verbose) print('Test for Gaussianity of the independent components')
+  if(verbose) print(Gauss_Tests(ICs))
   
   # [Here, we really should perform some tests to see if the 'icasig' 
   # really are independent. If they are not very independent, we should
   # issue a warning. This is not yet implemented.]
 
   # Try to permute the rows of W so that sum(1./abs(diag(W))) is minimized
-  cat('Performing row permutation...\n');
+  if(verbose) cat('Performing row permutation...\n');
   dims <- nrow(X)
   if (dims <= 8) {  
-    cat('(Small dimensionality, using brute-force method.)\n')
+    if(verbose) cat('(Small dimensionality, using brute-force method.)\n')
     temp <- nzdiagbruteforce( W )
     Wp <- temp$Wopt
     rowp <- temp$rowp
   }
   else {
-    cat('(Using the Hungarian algorithm.)\n')
+    if(verbose) cat('(Using the Hungarian algorithm.)\n')
     stop('Not implemented yet!')
   }
-  cat('Done!\n')
+  if(verbose) cat('Done!\n')
 
   # Divide each row of Wp by the diagonal element
   estdisturbancestd <- 1/diag(abs(Wp))
@@ -66,7 +66,7 @@ estimate <- function( X ) {
   # Compute corresponding B
   Best <- diag(dims)-Wp
 
-#  print(Best)
+#  if(verbose) print(Best)
 
   # Estimate the constants c
   m <- rowMeans(X)
@@ -75,31 +75,31 @@ estimate <- function( X ) {
 
   # Next, identically permute the rows and columns of B so as to get an
   # approximately strictly lower triangular matrix
-  cat('Performing permutation for causal order...\n');
+  if(verbose) cat('Performing permutation for causal order...\n');
 
   if (dims <= 8) {  
-    cat('(Small dimensionality, using brute-force method.)\n');
+    if(verbose) cat('(Small dimensionality, using brute-force method.)\n');
     temp <- sltbruteforce( Best )
     Bestcausal <- temp$Bopt
     causalperm <- temp$optperm
   }
   else {
-    cat('(Using pruning algorithm.)\n')
+    if(verbose) cat('(Using pruning algorithm.)\n')
     stop('Not implemented yet!') 
   }
-  cat('Done!\n');
+  if(verbose) cat('Done!\n');
 
-  print(Bestcausal)
+  if(verbose) print(Bestcausal)
   
   # Here, we report how lower triangular the result was, and in 
   # particular we issue a warning if it was not so good!
   percentinupper <- sltscore(Bestcausal)/sum(Bestcausal^2)
   if (percentinupper>0.2) 
-    cat('WARNING: Causal B not really triangular at all!!\n')
+    if(verbose) cat('WARNING: Causal B not really triangular at all!!\n')
   else if (percentinupper>0.05)
-    cat('WARNING: Causal B only somewhat triangular!\n')
+    if(verbose) cat('WARNING: Causal B only somewhat triangular!\n')
   else
-    cat('Causal B nicely triangular. No problems to report here.\n')
+    if(verbose) cat('Causal B nicely triangular. No problems to report here.\n')
 
   # Set the upper triangular to zero
   Bestcausal[upper.tri(Bestcausal,diag=FALSE)] <- 0

@@ -1,5 +1,5 @@
 VARLiNGAM <- function(Data, est_meth="ols", ntests=TRUE, pruning=TRUE,
-             regstats=FALSE, corank=NA, fmlad=FALSE) {
+             regstats=FALSE, corank=NA, fmlad=FALSE, verbose = FALSE) {
 
   # Estimate a VAR-LiNGAM, see
   # - A. Hyvärinen, S. Shimizu, P.O. Hoyer ((ICML-2008). Causal modelling
@@ -51,46 +51,46 @@ VARLiNGAM <- function(Data, est_meth="ols", ntests=TRUE, pruning=TRUE,
   nlags <- (dim(Data)[2] - 2)/nvar - 1
 
   # some information on the input
-  cat("\n------------------------ some information ------------------------\n")
-  cat("using",nlags,"time lag(s) and estimating VAR using",est_meth,"method\n")
+  if (verbose) cat("\n------------------------ some information ------------------------\n")
+  if (verbose) cat("using",nlags,"time lag(s) and estimating VAR using",est_meth,"method\n")
 
 
   # -------------------------------- step 1 --------------------------------- #
 
-  cat("estimate VAR ... ")
+  if (verbose) cat("estimate VAR ... ")
 
   VARres <- VAR_estim(Data, est_meth, regstats, corank, fmlad)
 
-  cat("Done! \n")
+  if (verbose) cat("Done! \n")
 
 
   # -------------------------------- step 2 --------------------------------- #
 
-  cat("calculating residuals ... ")
+  if (verbose) cat("calculating residuals ... ")
 
   nhat <- t(VARres$residuals) 
   dims <- dim(nhat)
 
-  cat("Done! \n")
+  if (verbose) cat("Done! \n")
 
 
   # -------------------------------- step 3 --------------------------------- #
 
   if (ntests) {
 
-    cat("\n Histograms, qq-plot and excess kurtosis of the residuals \n ")
+    if (verbose) cat("\n Histograms, qq-plot and excess kurtosis of the residuals \n ")
     Gauss_Stats(nhat)
 
-    cat("Tests for normality of residuals ... p-values: \n")
+    if (verbose) cat("Tests for normality of residuals ... p-values: \n")
     print(Gauss_Tests(nhat))
 
   }
 
-  cat("\nPerform LiNGAM analysis on residuals ... \n")
+  if (verbose) cat("\nPerform LiNGAM analysis on residuals ... \n")
 
   if (pruning) {
     # prune results immediately
-    reslg <- lingam(nhat)
+    reslg <- lingam(nhat, verbose = verbose)
     B0hat <- reslg$Bpruned
   }
   else {
@@ -110,7 +110,7 @@ VARLiNGAM <- function(Data, est_meth="ols", ntests=TRUE, pruning=TRUE,
     B0hat <- B0n[iperm(reslg$k),iperm(reslg$k)]
   }
 
-  cat("Done with LiNGAM analysis! \n")
+  if (verbose) cat("Done with LiNGAM analysis! \n")
 
 
   # -------------------------------- step 4 --------------------------------- #
