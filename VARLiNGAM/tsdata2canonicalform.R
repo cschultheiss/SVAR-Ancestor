@@ -36,15 +36,15 @@ tsdata2canonicalform <- function(X,nlags=1, verbose = FALSE) {
     nvar <- dims[1] # number of variables
   }
 
-  data <- array(0,dim=c(nobs-nlags,2+nvar*(nlags+1)))
+  p <- ncol(X)
+  xt <- matrix(NA, nrow = nrow(X), ncol = p * (nlags +1))
+  for(j in 1:p){
+    xtj <- lagmatrix(X[,j], c(1:nlags, 0))
 
-  for (i in (nlags+1):nobs) {
-    # past and current values at time point i-nlags
-    temp <- t(X[c((i-1):(i-nlags),i),])
-    dim(temp) <- c(1,nvar*(nlags+1))
-    data[i-nlags,] <- c(1,i-nlags,temp) # id, time point, past & current values
-    if (i%%1000==0 && verbose) cat(i, 'out of', dims[1], '\n')
-  } # end for i
+    xt[,j + p * (0:nlags)] <- xtj
+  }
+  xt <- xt[complete.cases(xt),]
+  xt <- cbind(rep(1, nrow(xt)), 1:nrow(xt), xt)
 
   # get labels for colnames
   # curvali = i-the variable (at current time t)
@@ -57,9 +57,9 @@ tsdata2canonicalform <- function(X,nlags=1, verbose = FALSE) {
   }
   temp1 <- paste(sep="",'curval', 1:nvar)
   temp2 <- c(temp2,temp1)
+  
+  colnames(xt) <- c("id","curtime",temp2)
 
-  colnames(data) <- c("id","curtime",temp2)
-
-  data
+  xt
 
 }
