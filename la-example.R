@@ -1,14 +1,15 @@
 source("lin-anc-ts.R")
 nrep <- 1e3
-n <- 1e2
+n <- 1e3
 p <- 2
 deg <- 1
 ptot <- p * (deg + 1)
 zv <- pv <- array(NA, c(nrep, p, ptot))
 lg <- array(NA, c(nrep, p, p))
 for (r in 1:nrep){
-  eps1 <- runif(n, -1, 1)
-  eps2 <- runif(n, -1, 1)
+  eps1 <- rnorm(n)
+  eps2 <- rnorm(n)
+  eps1 <- sign(eps1) * abs(eps1)^1.1
   x1 <- x2  <- numeric(n)
   x1[1] <- eps1[1]
   x2[1] <- eps2[1]
