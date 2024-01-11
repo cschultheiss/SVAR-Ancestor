@@ -40,7 +40,6 @@ lin.anc.ts.alt <- function(x, degree, targets = colnames(x),  f  = function(x) x
   }
   xt <- xt[complete.cases(xt),]
   colnames(xt) <- paste(rep(cols, degree + 1), ".", rep(0:degree, each = p), sep ="")
-  browser()
   u <- xt[,1:p] - xt[,-c(1:p)] %*% solve(crossprod(xt[,-c(1:p)])) %*% crossprod(xt[,-c(1:p)], xt[,1:p])
   n <- nrow(u)
   z.val <- matrix(NA, nrow = length(targets), ncol = p * (degree + 1), dimnames = list(targets, colnames(xt)))
