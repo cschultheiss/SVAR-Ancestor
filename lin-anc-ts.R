@@ -11,13 +11,23 @@ lin.anc.ts <- function(x, degree, targets = colnames(x),  f  = function(x) x^3){
   }
   xt <- xt[complete.cases(xt),]
   colnames(xt) <- paste(rep(cols, degree + 1), ".", rep(0:degree, each = p), sep ="")
-  u <- xt[,1:p] - xt[,-c(1:p)] %*% solve(crossprod(xt[,-c(1:p)])) %*% crossprod(xt[,-c(1:p)], xt[,1:p])
+
+  if(degree > 0){
+    u <- xt[,1:p] - xt[,-c(1:p)] %*% solve(crossprod(xt[,-c(1:p)])) %*% crossprod(xt[,-c(1:p)], xt[,1:p])
+  } else {
+    u <- xt
+  }
   n <- nrow(u)
   z.val <- matrix(NA, nrow = length(targets), ncol = p * (degree + 1), dimnames = list(targets, colnames(xt)))
   
   for (s in 0:degree){
-    us <- xt[(s+1):n,1:p] - xt[1:(n-s),-c(1:p)] %*% solve(crossprod(xt[1:(n-s),-c(1:p)]))  %*% 
-      crossprod(xt[1:(n-s),-c(1:p)], xt[(s+1):n,1:p])
+    if(degree > 0){
+      us <- xt[(s+1):n,1:p] - xt[1:(n-s),-c(1:p)] %*% solve(crossprod(xt[1:(n-s),-c(1:p)]))  %*% 
+        crossprod(xt[1:(n-s),-c(1:p)], xt[(s+1):n,1:p])
+    } else {
+      us <- xt
+    }
+    
     colnames(us) <- colnames(x)
     wiz <- 1:p + s*p
     
