@@ -16,8 +16,12 @@ instant.graph(la_geyser2)
 # only latter shows instant effect
 
 
-milk <- data.frame(butter = read.table("data/data_butter")$V1, cheddar = read.table("data/data_cheddar")$V1)
+milk <- data.frame(butter = read.table("data/data_butter.txt")$V1, cheddar = read.table("data/data_cheddar.txt")$V1)
 
 la_milk <- lin.anc.ts(milk, 6)
 instant.graph(la_milk)
 summary.graph(la_milk)
+
+gas_furnace <- read.csv("data/gas-furnace.csv")
+
+la_gas <- lin.anc.ts(gas_furnace, 2)
