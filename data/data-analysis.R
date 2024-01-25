@@ -24,4 +24,4 @@ summary.graph(la_milk)
 
 gas_furnace <- read.csv("data/gas-furnace.csv")
 
-la_gas <- lin.anc.ts(gas_furnace, 2)
+la_gas <- lin.anc.ts(gas_furnace, 6)

@@ -51,7 +51,7 @@ summary.p.val<- function(lin.anc){
   
   preds <- colnames(pv)
   targets <- rownames(pv)
-  p <- sum(grepl(".0", preds))
+  p <- sum(grepl("\\.0", preds))
   npv <- ncol(pv)/p
   spv <- pv[,1:p]
   colnames(spv) <- gsub("\\.0.*","",colnames(spv))
@@ -101,7 +101,7 @@ instant.graph <- function(lin.anc, alpha = 0.05, verbose = FALSE, corr = TRUE){
   preds <- colnames(pv)
   targets <- rownames(pv)
   if (corr){
-    p <- sum(grepl(".0", preds))
+    p <- sum(grepl("\\.0", preds))
     pv <- pv[,1:p]
     colnames(pv) <- gsub("\\.0.*","",colnames(pv))
     for(ta in targets) pv[ta, ta] <- 1
