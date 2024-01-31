@@ -23,7 +23,7 @@ if (save) {
   dir.create(paste("results/", newdir, sep="")) 
 }
 
-nsim <- 20
+nsim <- 1000
 progress <- function(n, tag) {
   mod <- 16
   if (n %% mod == 0 ) {
@@ -37,7 +37,7 @@ progress <- function(n, tag) {
 
 opts <- list(progress = progress)
 
-n.vec <- 10^(2:3)
+n.vec <- 10^(2:6)
 p <- 6
 nlag <- 1
 
