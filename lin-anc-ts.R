@@ -60,7 +60,7 @@ summary.p.val<- function(lin.anc){
     for (j in 1:p){
       if(targets[i] == colnames(spv)[j]) next()
       pij <- pv[i, seq(j, j + p*(npv - 1), length.out = npv)]
-      spv[i,j] <- min(sort(pij) * npv /(1:npv)) * sum(1/(1:npv))
+      spv[i,j] <- min(min(sort(pij) * npv /(1:npv)) * sum(1/(1:npv)), 1)
     }
   }
   return(spv)
