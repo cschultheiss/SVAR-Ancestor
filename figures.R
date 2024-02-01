@@ -1,5 +1,5 @@
 require(latex2exp)
-source("lin-anc-ts.R")
+source("helpers-figures.R")
 
 # figures for randomized graph
 folder <- "results/31-Jan-2024 11.53"
