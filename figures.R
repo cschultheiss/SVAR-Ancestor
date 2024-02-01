@@ -8,8 +8,8 @@ flz <- list.files(folder)
 load(paste(folder, "/", flz[1], sep = ""))
 lf <- length(flz)
 
-inst.col <- which(grepl("\\.0", dimnames(simulation$res)[[2]]))
-lag.col <- which(grepl("\\.1", dimnames(simulation$res)[[2]]))
+inst.col <- dimnames(simulation$res)[[2]][which(grepl("\\.0", dimnames(simulation$res)[[2]]))]
+lag.col <- dimnames(simulation$res)[[2]][which(grepl("\\.1", dimnames(simulation$res)[[2]]))]
 
 p <- length(inst.col)
 nsim <- dim(simulation$res)[3]
@@ -22,8 +22,12 @@ if (any(sapply(flz, function(str) grepl("setup", str)))) {
   lf <- lf - 1
 }
 
+# reference value for test
 alpha <- 0.05
+# which ancestors to consider, all, inst, lag
 mode <- "all"
+# correct for not-considered as well?
+all.cor <- TRUE
 
 As[abs(As) > 1e-5] <- 1
 As[abs(As) < 1e-5] <- 0
@@ -62,27 +66,34 @@ for (file in flz[1:lf]) {
   p.inst <- 2 * pnorm(-abs(z.inst[,-j]))
   p.lag <- 2 * pnorm(-abs(z.lag))
   all.p <- cbind(p.inst, p.lag)
+  all.p.adj <- t(apply(all.p, 1, holm.uncut))
+  non.anc <- cbind(!Asj, !Btotj)
   switch(mode,
          all = {
-           all.p.adj <- t(apply(all.p, 1, holm.uncut))
-           non.anc <- cbind(!Asj, !Btotj)
            anc <- cbind(!!Asj, !!Btotj)
+           p.sub <- all.p.adj
          },
          inst = {
-           all.p.adj <- t(apply(p.inst, 1, holm.uncut))
-           non.anc <- !Asj
+           if(!all.cor){
+             all.p.adj <- t(apply(p.inst, 1, holm.uncut))
+             non.anc <- !Asj
+           }
            anc <- !!Asj
+           p.sub <- all.p.adj[,colnames(all.p.adj) %in% inst.col]
          },
          lag = {
-           all.p.adj <- t(apply(p.lag, 1, holm.uncut))
-           non.anc <- !Btotj
+           if(!all.cor){
+             all.p.adj <- t(apply(p.lag, 1, holm.uncut))
+             non.anc <- !Btotj
+           }
            anc <- !!Btotj
+           p.sub <- all.p.adj[,colnames(all.p.adj) %in% lag.col]
          })
   non.anc[!non.anc] <- NA
   p.min <- apply(all.p.adj * non.anc, 1, min, na.rm = TRUE)
   lims.p <- c(0, sort(p.min))
-  TAR.p[,i] <- sapply(lims.p, function(lim) mean(all.p.adj[anc] < lim, na.rm = TRUE))
-  alpha.perf.p[,i] <- c(mean(p.min < alpha), mean(all.p.adj[anc] < alpha, na.rm = TRUE))
+  TAR.p[,i] <- sapply(lims.p, function(lim) mean(p.sub[anc] < lim, na.rm = TRUE))
+  alpha.perf.p[,i] <- c(mean(p.min < alpha), mean(p.sub[anc] < alpha, na.rm = TRUE))
 }
 
 var.ind <- c(1:p)[-j]
