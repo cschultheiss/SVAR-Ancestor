@@ -24,7 +24,8 @@ if (any(sapply(flz, function(str) grepl("setup", str)))) {
 
 # reference value for test
 alpha <- 0.05
-# which ancestors to consider, all, inst, lag
+# which ancestors to consider, all, inst (instantaneous), lag (lagged),
+# lag.dir (lagged with direct edge), lag.indir (lagged without direct edge)
 mode <- "all"
 # correct for not-considered as well?
 all.cor <- TRUE
@@ -35,9 +36,11 @@ As[abs(As) < 1e-5] <- 0
 B1s[abs(B1s) > 1e-5] <- 1
 B1s[abs(B1s) < 1e-5] <- 0
 
+M1s <- B1s
 Btot <- B1s
 for(i in 1:(dim(B1s)[3])){
-  Btot[,,i] <- As[,,i] %*% B1s[,,i] %*% As[,,i]
+  M1s[,,i] <- As[,,i] %*% B1s[,,i]
+  Btot[,,i] <- M1s[,,i] %*% As[,,i]
 }
 
 for (l in 1:p){
@@ -46,9 +49,11 @@ for (l in 1:p){
 
 Asj <- t(As[j, ,])[, -j]
 Btotj <- t(Btot[j, ,])
+B1j <- t(B1s[j, ,])
+M1j <- t(M1s[j, ,])
 
 TAR.p <- matrix(NA, nsim + 1, lf)
-mean.z <- matrix(NA, lf, 4)
+mean.z <- matrix(NA, lf, 5)
 
 alpha.perf.p <- matrix(NA, 2, lf)
 i <- 0
@@ -59,16 +64,21 @@ for (file in flz[1:lf]) {
   z.lag <- t(simulation$res[j, lag.col,])
   
   mean.z[i, 1] <- simulation$n
+  # instantaneous 
   mean.z[i, 2] <- mean(abs(z.inst[,-j])[!!Asj])
-  mean.z[i, 3] <- mean(abs(z.lag)[!!Btotj])
-  mean.z[i, 4] <- mean(c(abs(z.inst[,-j])[!Asj], abs(z.lag)[!Btotj]))
+  # lagged with direct edge
+  mean.z[i, 3] <- mean(abs(z.lag)[!!M1j])
+  # lagged without direct edge
+  mean.z[i, 4] <- mean(abs(z.lag)[!M1j & !!Btotj])
+  # non-ancestor
+  mean.z[i, 5] <- mean(c(abs(z.inst[,-j])[!Asj], abs(z.lag)[!Btotj]))
   
   p.inst <- 2 * pnorm(-abs(z.inst[,-j]))
   p.lag <- 2 * pnorm(-abs(z.lag))
   all.p <- cbind(p.inst, p.lag)
   all.p.adj <- t(apply(all.p, 1, holm.uncut))
   non.anc <- cbind(!Asj, !Btotj)
-  switch(mode,
+  {switch(mode,
          all = {
            anc <- cbind(!!Asj, !!Btotj)
            p.sub <- all.p.adj
@@ -88,7 +98,21 @@ for (file in flz[1:lf]) {
            }
            anc <- !!Btotj
            p.sub <- all.p.adj[,colnames(all.p.adj) %in% lag.col]
-         })
+         },
+         lag.dir = {
+           if(!all.cor){
+             stop("Inversion of considered has no null guarantees")
+           }
+           anc <- !!B1j
+           p.sub <- all.p.adj[,colnames(all.p.adj) %in% lag.col]
+         },
+         lag.indir = {
+           if(!all.cor){
+             stop("Inversion of considered has no null guarantees")
+           }
+           anc <- !B1j & !!Btotj
+           p.sub <- all.p.adj[,colnames(all.p.adj) %in% lag.col]
+         })}
   non.anc[!non.anc] <- NA
   p.min <- apply(all.p.adj * non.anc, 1, min, na.rm = TRUE)
   lims.p <- c(0, sort(p.min))
@@ -115,7 +139,7 @@ matplot(mean.z[, 1], mean.z[, -1], log ="xy", xlab = "n",
         pch = 1:pp, col = (1:(lf + 1))[-5], lwd = 2, las = 1)
 # legend("topleft", ncol = 3, legend = labels[ord][1:pp],
 # pch = (1:pp)[ord], col = (1:(lf + 1))[-5][ord], pt.lwd = 2)
-which.line <- c(1:2)
+which.line <- c(1:3)
 for (wl in which.line){
   lines(mean.z[, 1], sqrt(mean.z[, 1]) * mean.z[4, wl + 1] / sqrt(mean.z[4, 1]), lty = 2, col = "grey")
 }
@@ -128,3 +152,59 @@ lines(c(alpha, alpha), c(0, 1), col = "gray", lty = 2)
 
 # legend('bottomright', col = (1:(lf + 1))[-5], ncol = 1, lwd = 2, legend = labels.roc[-lf], lty = (1:(lf + 1)))
 # dev.off()
+
+all.anc <- pmax(As, Btot) > 0
+for(j in 1:p) all.anc[j, j, ] <- FALSE
+dimnames(all.anc)[[1]] <- dimnames(all.anc)[[2]] <- dimnames(simulation$res)[[1]]
+all.anc[] <- apply(all.anc, 3, p.to.anc)
+non.anc <- !all.anc
+non.anc[all.anc] <- NA
+
+TARs <- list()
+alpha.inds <- list()
+lg.perfs <- list()
+labels.roc <- eval(parse(text = paste("c(", paste("TeX('$n=10^", 2:6, "$')", sep = "", collapse = ","), ")")))
+n.vec <- 10^(2:6)
+s <- 0
+for (n in n.vec){
+  s <- s + 1
+  n.string = paste("n=", n, " ", sep = "")
+  flz.n <- flz[which(sapply(flz, function(str) grepl(n.string, str, fixed = TRUE)))]
+  lf <- length(flz.n)
+  
+  TAR <- matrix(NA, nsim + 2, 2 * lf)
+  alpha.ind <- integer(lf)
+  i <- 0
+  for (file in flz.n) {
+    i <- i + 1
+    cat("\n", i, "\n")
+    load(paste(folder, "/", file, sep = ""))
+    z <- simulation$res
+    pv <- 2 * pnorm(-abs(z))
+    sum.pv <- pv[,inst.col,]
+    dimnames(sum.pv)[[2]] <- dimnames(sum.pv)[[1]]
+    sum.pv[] <- apply(pv, 3, summary.p.val)
+    pv.adj <- sum.pv
+    pv.adj[] <- apply(sum.pv, 3, function(pv) holm.corr(pv, cut = TRUE))
+    # pv.nonanc <- t(apply(pv.adj, 3, function(pv) pv[which(!ancmat)]))
+
+    p.min <- pmin(apply(pv.adj * non.anc, 3, min, na.rm = TRUE))
+    lims <- sort(unique(c(0, alpha, p.min)))
+    alpha.ind[i] <- which(lims == alpha)
+    
+    stru <- stru.anc <- stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], length(lims), nsim))
+    stru[] <- apply(pv.adj, 3, find.structures, lims = lims)
+    for (k in 1:length(lims)){
+      stru.anc[,,k,] <- stru[,,k,] * As1
+      stru.nonanc[,,k,] <- stru[,,k,] * As2
+    }
+    pwr <- apply(stru.anc, 3, mean, na.rm = TRUE)
+    FWER <- apply(apply(stru.nonanc, 3:4, max, na.rm = TRUE), 1, mean)
+    
+    
+    TAR[1:length(lims),c(i, lf + i)] <- c(FWER, pwr)
+  }
+  # save for convenience
+  TARs[[s]] <- TAR
+  alpha.inds[[s]] <- alpha.ind
+}
