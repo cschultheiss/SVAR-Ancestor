@@ -5,3 +5,5 @@
 outfiles
 .sync.ffs_db
 results
+codeTimino
+iid-cov.R

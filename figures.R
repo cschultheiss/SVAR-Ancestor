@@ -1,3 +1,6 @@
+require(latex2exp)
+source("lin-anc-ts.R")
+
 # figures for randomized graph
 folder <- "results/31-Jan-2024 11.53"
 savefolder <- "Figures/rand-graph-Gauss"
@@ -20,6 +23,7 @@ if (any(sapply(flz, function(str) grepl("setup", str)))) {
 }
 
 alpha <- 0.05
+mode <- "all"
 
 As[abs(As) > 1e-5] <- 1
 As[abs(As) < 1e-5] <- 0
@@ -58,13 +62,27 @@ for (file in flz[1:lf]) {
   p.inst <- 2 * pnorm(-abs(z.inst[,-j]))
   p.lag <- 2 * pnorm(-abs(z.lag))
   all.p <- cbind(p.inst, p.lag)
-  all.p.adj <- t(apply(all.p, 1, holm.uncut))
-  non.anc <- cbind(!Asj, !Btotj)
+  switch(mode,
+         all = {
+           all.p.adj <- t(apply(all.p, 1, holm.uncut))
+           non.anc <- cbind(!Asj, !Btotj)
+           anc <- cbind(!!Asj, !!Btotj)
+         },
+         inst = {
+           all.p.adj <- t(apply(p.inst, 1, holm.uncut))
+           non.anc <- !Asj
+           anc <- !!Asj
+         },
+         lag = {
+           all.p.adj <- t(apply(p.lag, 1, holm.uncut))
+           non.anc <- !Btotj
+           anc <- !!Btotj
+         })
   non.anc[!non.anc] <- NA
   p.min <- apply(all.p.adj * non.anc, 1, min, na.rm = TRUE)
   lims.p <- c(0, sort(p.min))
-  TAR.p[,i] <- sapply(lims.p, function(lim) mean(all.p.adj[cbind(!!Asj, !!Btotj)] < lim, na.rm = TRUE))
-  alpha.perf.p[,i] <- c(mean(p.min < alpha), mean(all.p.adj[cbind(!!Asj, !!Btotj)] < alpha, na.rm = TRUE))
+  TAR.p[,i] <- sapply(lims.p, function(lim) mean(all.p.adj[anc] < lim, na.rm = TRUE))
+  alpha.perf.p[,i] <- c(mean(p.min < alpha), mean(all.p.adj[anc] < alpha, na.rm = TRUE))
 }
 
 var.ind <- c(1:p)[-j]
@@ -95,7 +113,7 @@ abline(h = sqrt(2 / pi), lty = 2, col =" grey")
 matplot((0:nsim)/nsim, TAR.p[,], type = "s", xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
         col = (1:(lf + 1))[-5], las = 1)
 points(alpha.perf.p[1, ], alpha.perf.p[2, ], col = (1:(lf + 1))[-5], pch = 3)
-lines(c(0.05, 0.05), c(0, 1), col = "gray", lty = 2)
+lines(c(alpha, alpha), c(0, 1), col = "gray", lty = 2)
 
 # legend('bottomright', col = (1:(lf + 1))[-5], ncol = 1, lwd = 2, legend = labels.roc[-lf], lty = (1:(lf + 1)))
 # dev.off()
