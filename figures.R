@@ -159,52 +159,45 @@ dimnames(all.anc)[[1]] <- dimnames(all.anc)[[2]] <- dimnames(simulation$res)[[1]
 all.anc[] <- apply(all.anc, 3, p.to.anc)
 non.anc <- !all.anc
 non.anc[all.anc] <- NA
+all.anc[!all.anc] <- NA
 
-TARs <- list()
-alpha.inds <- list()
-lg.perfs <- list()
-labels.roc <- eval(parse(text = paste("c(", paste("TeX('$n=10^", 2:6, "$')", sep = "", collapse = ","), ")")))
-n.vec <- 10^(2:6)
-s <- 0
-for (n in n.vec){
-  s <- s + 1
-  n.string = paste("n=", n, " ", sep = "")
-  flz.n <- flz[which(sapply(flz, function(str) grepl(n.string, str, fixed = TRUE)))]
-  lf <- length(flz.n)
+TAR <- matrix(NA, nsim + 2, 2 * lf)
+alpha.ind <- integer(lf)
+i <- 0
+for (file in flz[1:lf]) {
+  i <- i + 1
+  cat("\n", i, "\n")
+  load(paste(folder, "/", file, sep = ""))
+  z <- simulation$res
+  pv <- 2 * pnorm(-abs(z))
+  sum.pv <- pv[,inst.col,]
+  dimnames(sum.pv)[[2]] <- dimnames(sum.pv)[[1]]
+  sum.pv[] <- apply(pv, 3, summary.p.val)
+  pv.adj <- sum.pv
+  pv.adj[] <- apply(sum.pv, 3, function(pv) holm.corr(pv, cut = TRUE))
+  # pv.nonanc <- t(apply(pv.adj, 3, function(pv) pv[which(!ancmat)]))
   
-  TAR <- matrix(NA, nsim + 2, 2 * lf)
-  alpha.ind <- integer(lf)
-  i <- 0
-  for (file in flz.n) {
-    i <- i + 1
-    cat("\n", i, "\n")
-    load(paste(folder, "/", file, sep = ""))
-    z <- simulation$res
-    pv <- 2 * pnorm(-abs(z))
-    sum.pv <- pv[,inst.col,]
-    dimnames(sum.pv)[[2]] <- dimnames(sum.pv)[[1]]
-    sum.pv[] <- apply(pv, 3, summary.p.val)
-    pv.adj <- sum.pv
-    pv.adj[] <- apply(sum.pv, 3, function(pv) holm.corr(pv, cut = TRUE))
-    # pv.nonanc <- t(apply(pv.adj, 3, function(pv) pv[which(!ancmat)]))
-
-    p.min <- pmin(apply(pv.adj * non.anc, 3, min, na.rm = TRUE))
-    lims <- sort(unique(c(0, alpha, p.min)))
-    alpha.ind[i] <- which(lims == alpha)
-    
-    stru <- stru.anc <- stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], length(lims), nsim))
-    stru[] <- apply(pv.adj, 3, find.structures, lims = lims)
-    for (k in 1:length(lims)){
-      stru.anc[,,k,] <- stru[,,k,] * As1
-      stru.nonanc[,,k,] <- stru[,,k,] * As2
-    }
-    pwr <- apply(stru.anc, 3, mean, na.rm = TRUE)
-    FWER <- apply(apply(stru.nonanc, 3:4, max, na.rm = TRUE), 1, mean)
-    
-    
-    TAR[1:length(lims),c(i, lf + i)] <- c(FWER, pwr)
+  p.min <- pmin(apply(pv.adj * non.anc, 3, min, na.rm = TRUE))
+  lims <- sort(unique(c(0, alpha, p.min)))
+  alpha.ind[i] <- which(lims == alpha)
+  
+  stru <- stru.anc <- stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], length(lims), nsim))
+  stru[] <- apply(pv.adj, 3, find.structures, lims = lims)
+  for (k in 1:length(lims)){
+    stru.anc[,,k,] <- stru[,,k,] * all.anc
+    stru.nonanc[,,k,] <- stru[,,k,] * non.anc
   }
-  # save for convenience
-  TARs[[s]] <- TAR
-  alpha.inds[[s]] <- alpha.ind
+  pwr <- apply(stru.anc, 3, mean, na.rm = TRUE)
+  FWER <- apply(apply(stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
+  
+  TAR[1:length(lims),c(i, lf + i)] <- c(FWER, pwr)
 }
+
+par(mfrow = c(1,1))
+matplot(TAR[,1:lf], TAR[,lf + (1:lf)], type = "s",
+        xlim = c(0,1), ylim = c(0,1), xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
+        col = (1:p)[-5], las = 1)
+points(diag(TAR[alpha.ind,1:lf]), diag(TAR[alpha.ind,lf + (1:lf)]),
+       col = (1:p)[-5], pch = 3)
+lines(c(0.05, 0.05), c(0, 1), col = "gray", lty = 2)
+
