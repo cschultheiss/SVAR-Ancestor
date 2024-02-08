@@ -153,13 +153,16 @@ lines(c(alpha, alpha), c(0, 1), col = "gray", lty = 2)
 # legend('bottomright', col = (1:(lf + 1))[-5], ncol = 1, lwd = 2, legend = labels.roc[-lf], lty = (1:(lf + 1)))
 # dev.off()
 
-all.anc <- pmax(As, Btot) > 0
-for(j in 1:p) all.anc[j, j, ] <- FALSE
+all.anc <- pmax(As, Btot, na.rm = TRUE) > 0
 dimnames(all.anc)[[1]] <- dimnames(all.anc)[[2]] <- dimnames(simulation$res)[[1]]
 all.anc[] <- apply(all.anc, 3, p.to.anc)
 non.anc <- !all.anc
 non.anc[all.anc] <- NA
 all.anc[!all.anc] <- NA
+
+for (j in 1:p){
+  all.anc[j, j,] <- non.anc[j, j,] <- NA
+}
 
 TAR <- matrix(NA, nsim + 2, 2 * lf)
 alpha.ind <- integer(lf)
