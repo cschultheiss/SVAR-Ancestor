@@ -49,7 +49,7 @@ print(seed.vec) # 3588 3052 2252 5257 8307
 As <- B1s <- array(0, c(p, p, nsim))
 pers <- matrix(NA, p, nsim)
 for (s in 1:nsim){
-  rd <- randomDAG(p, 0.4, lB = 0.5, uB = 1)
+  rd <- randomDAG(p, 0.2, lB = 0.5, uB = 1)
 
   B <- matrix(0, p , p)
   for (i in 2:p){
@@ -70,7 +70,7 @@ for (s in 1:nsim){
   }
   As[, , s] <- A
   
-  B1 <- matrix(runif(p^2, 0.2, 0.8) * rbinom(p^2, 1, 0.2) * sample(c(-1, 1), p^2, TRUE), nrow = p)
+  B1 <- matrix(runif(p^2, 0.2, 0.8) * rbinom(p^2, 1, 0.1) * sample(c(-1, 1), p^2, TRUE), nrow = p)
   Btild <- A %*% B1
   eig.max <- max(abs(eigen(Btild)$values))
   if(eig.max > 0.95){
