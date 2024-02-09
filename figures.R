@@ -2,8 +2,8 @@ require(latex2exp)
 source("helpers-figures.R")
 
 # figures for randomized graph
-folder <- "results/31-Jan-2024 11.53"
-savefolder <- "Figures/rand-graph-42"
+folder <- "results/09-Feb-2024 15.02"
+savefolder <- "Figures/rand-graph-21"
 flz <- list.files(folder)
 load(paste(folder, "/", flz[1], sep = ""))
 lf <- length(flz)
