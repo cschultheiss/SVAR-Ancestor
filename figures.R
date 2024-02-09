@@ -3,7 +3,7 @@ source("helpers-figures.R")
 
 # figures for randomized graph
 folder <- "results/31-Jan-2024 11.53"
-savefolder <- "Figures/rand-graph-Gauss"
+savefolder <- "Figures/rand-graph-42"
 flz <- list.files(folder)
 load(paste(folder, "/", flz[1], sep = ""))
 lf <- length(flz)
@@ -52,7 +52,7 @@ Btotj <- t(Btot[j, ,])
 B1j <- t(B1s[j, ,])
 M1j <- t(M1s[j, ,])
 
-TAR.p <- matrix(NA, nsim + 1, lf)
+TAR.p <- matrix(NA, nsim + 1, 2 * lf)
 mean.z <- matrix(NA, lf, 5)
 
 alpha.perf.p <- matrix(NA, 2, lf)
@@ -76,7 +76,7 @@ for (file in flz[1:lf]) {
   p.inst <- 2 * pnorm(-abs(z.inst[,-j]))
   p.lag <- 2 * pnorm(-abs(z.lag))
   all.p <- cbind(p.inst, p.lag)
-  all.p.adj <- t(apply(all.p, 1, holm.uncut))
+  all.p.adj <- t(apply(all.p, 1, holm.corr))
   non.anc <- cbind(!Asj, !Btotj)
   {switch(mode,
          all = {
@@ -85,7 +85,7 @@ for (file in flz[1:lf]) {
          },
          inst = {
            if(!all.cor){
-             all.p.adj <- t(apply(p.inst, 1, holm.uncut))
+             all.p.adj <- t(apply(p.inst, 1, holm.corr))
              non.anc <- !Asj
            }
            anc <- !!Asj
@@ -93,7 +93,7 @@ for (file in flz[1:lf]) {
          },
          lag = {
            if(!all.cor){
-             all.p.adj <- t(apply(p.lag, 1, holm.uncut))
+             all.p.adj <- t(apply(p.lag, 1, holm.corr))
              non.anc <- !Btotj
            }
            anc <- !!Btotj
@@ -116,7 +116,9 @@ for (file in flz[1:lf]) {
   non.anc[!non.anc] <- NA
   p.min <- apply(all.p.adj * non.anc, 1, min, na.rm = TRUE)
   lims.p <- c(0, sort(p.min))
-  TAR.p[,i] <- sapply(lims.p, function(lim) mean(p.sub[anc] < lim, na.rm = TRUE))
+  pwr <- sapply(lims.p, function(lim) mean(p.sub[anc] < lim, na.rm = TRUE))
+  FWER <- sapply(lims.p, function(l) mean(lims.p < l))
+  TAR.p[,c(i , lf + i)] <- c(FWER, pwr)
   alpha.perf.p[,i] <- c(mean(p.min < alpha), mean(p.sub[anc] < alpha, na.rm = TRUE))
 }
 
@@ -131,8 +133,8 @@ pointfrac <- 0.8
 cx <- 0.75
 
 
-# png(paste(savefolder, "/z+ROC-noleg.png", sep = ""), width = 600 * plotfac,
-    # height = 300 * plotfac, res = 75 * plotfac)
+png(paste(savefolder, "/z+ROC-noleg.png", sep = ""), width = 600 * plotfac,
+height = 300 * plotfac, res = 75 * plotfac)
 par(mfrow = c(1,2))
 matplot(mean.z[, 1], mean.z[, -1], log ="xy", xlab = "n",
         ylab = "Average absolute z-statistics",
@@ -145,13 +147,13 @@ for (wl in which.line){
 }
 abline(h = sqrt(2 / pi), lty = 2, col =" grey")
 
-matplot((0:nsim)/nsim, TAR.p[,], type = "s", xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
-        col = (1:(lf + 1))[-5], las = 1)
+matplot(TAR.p[, 1:lf], TAR.p[,lf + (1:lf)], type = "s", xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
+        col = (1:(lf + 1))[-5], las = 1, xlim = c(0, max(TAR.p[,1:lf])), ylim = c(0, 1))
 points(alpha.perf.p[1, ], alpha.perf.p[2, ], col = (1:(lf + 1))[-5], pch = 3)
 lines(c(alpha, alpha), c(0, 1), col = "gray", lty = 2)
 
 # legend('bottomright', col = (1:(lf + 1))[-5], ncol = 1, lwd = 2, legend = labels.roc[-lf], lty = (1:(lf + 1)))
-# dev.off()
+dev.off()
 
 all.anc <- pmax(As, Btot, na.rm = TRUE) > 0
 dimnames(all.anc)[[1]] <- dimnames(all.anc)[[2]] <- dimnames(simulation$res)[[1]]
@@ -164,6 +166,10 @@ for (j in 1:p){
   all.anc[j, j,] <- non.anc[j, j,] <- NA
 }
 
+inst.anc <- As
+inst.anc[!inst.anc] <- NA
+non.inst.anc <- !As
+non.inst.anc[!non.inst.anc] <- NA
 
 TARs <- list()
 alpha.inds <- list()
@@ -178,41 +184,73 @@ for (s in 1:2){
     load(paste(folder, "/", file, sep = ""))
     z <- simulation$res
     pv <- 2 * pnorm(-abs(z))
-    sum.pv <- pv[,inst.col,]
-    dimnames(sum.pv)[[2]] <- dimnames(sum.pv)[[1]]
-    sum.pv[] <- apply(pv, 3, summary.p.val)
-    pv.adj <- sum.pv
-    pv.adj[] <- apply(sum.pv, 3, function(pv) holm.corr(pv, cut = TRUE))
-    # pv.nonanc <- t(apply(pv.adj, 3, function(pv) pv[which(!ancmat)]))
-    
-    p.min <- pmin(apply(pv.adj * non.anc, 3, min, na.rm = TRUE))
-    lims <- sort(unique(c(0, alpha, p.min)))
-    alpha.ind[i] <- which(lims == alpha)
-    
-    stru <- stru.anc <- stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], length(lims), nsim))
-    stru[] <- apply(pv.adj, 3, find.structures, lims = lims)
-    for (k in 1:length(lims)){
-      stru.anc[,,k,] <- stru[,,k,] * all.anc
-      stru.nonanc[,,k,] <- stru[,,k,] * non.anc
+    if (s == 1){
+      inst.pv <- pv[,inst.col,]
+      dimnames(inst.pv)[[2]] <- dimnames(inst.pv)[[1]]
+      for (j in 1:p){
+        inst.pv[j, j,] <- 1
+      }
+      pv.adj <- inst.pv
+      pv.adj[] <- apply(inst.pv, 3, function(pv) holm.corr(pv, cut = TRUE))
+      # pv.nonanc <- t(apply(pv.adj, 3, function(pv) pv[which(!ancmat)]))
+      
+      p.min <- pmin(apply(pv.adj * non.inst.anc, 3, min, na.rm = TRUE))
+      lims <- sort(unique(c(0, alpha, p.min)))
+      alpha.ind[i] <- which(lims == alpha)
+      
+      stru <- stru.anc <- stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], length(lims), nsim))
+      stru[] <- apply(pv.adj, 3, find.instant.structures, lims = lims)
+      for (k in 1:length(lims)){
+        stru.anc[,,k,] <- stru[,,k,] * inst.anc
+        stru.nonanc[,,k,] <- stru[,,k,] * non.inst.anc
+      }
+      pwr <- apply(stru.anc, 3, mean, na.rm = TRUE)
+      FWER <- apply(apply(stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
+      
+      TAR[1:length(lims),c(i, lf + i)] <- c(FWER, pwr)
+    } else if (s == 2){
+      sum.pv <- pv[,inst.col,]
+      dimnames(sum.pv)[[2]] <- dimnames(sum.pv)[[1]]
+      sum.pv[] <- apply(pv, 3, summary.p.val)
+      pv.adj <- sum.pv
+      pv.adj[] <- apply(sum.pv, 3, function(pv) holm.corr(pv, cut = TRUE))
+      # pv.nonanc <- t(apply(pv.adj, 3, function(pv) pv[which(!ancmat)]))
+      
+      p.min <- pmin(apply(pv.adj * non.anc, 3, min, na.rm = TRUE))
+      lims <- sort(unique(c(0, alpha, p.min)))
+      lims <- lims[is.finite(lims)]
+      alpha.ind[i] <- which(lims == alpha)
+      
+      stru <- stru.anc <- stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], length(lims), nsim))
+      stru[] <- apply(pv.adj, 3, find.structures, lims = lims)
+      for (k in 1:length(lims)){
+        stru.anc[,,k,] <- stru[,,k,] * all.anc
+        stru.nonanc[,,k,] <- stru[,,k,] * non.anc
+      }
+      pwr <- apply(stru.anc, 3, mean, na.rm = TRUE)
+      FWER <- apply(apply(stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
+      
+      TAR[1:length(lims),c(i, lf + i)] <- c(FWER, pwr)
+    } else {
+      stop("Wrong type")
     }
-    pwr <- apply(stru.anc, 3, mean, na.rm = TRUE)
-    FWER <- apply(apply(stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
-    
-    TAR[1:length(lims),c(i, lf + i)] <- c(FWER, pwr)
   }
 # save for convenience
 TARs[[s]] <- TAR
 alpha.inds[[s]] <- alpha.ind
 }
 
+png(paste(savefolder, "/ROC-graph-noleg.png", sep = ""), width = 600 * plotfac,
+height = 300 * plotfac, res = 75 * plotfac)
 par(mfrow = c(1,2))
 for (s in 1:2){
   TAR <- TARs[[s]]
   alpha.ind <- alpha.inds[[s]]
   matplot(TAR[,1:lf], TAR[,lf + (1:lf)], type = "s",
-        xlim = c(0,1), ylim = c(0,1), xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
+        xlim = c(0, max(TAR[,1:lf], na.rm = TRUE)), ylim = c(0,1), xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
         col = (1:p)[-5], las = 1)
   points(diag(TAR[alpha.ind,1:lf]), diag(TAR[alpha.ind,lf + (1:lf)]),
          col = (1:p)[-5], pch = 3)
   lines(c(0.05, 0.05), c(0, 1), col = "gray", lty = 2)
 }
+dev.off()
