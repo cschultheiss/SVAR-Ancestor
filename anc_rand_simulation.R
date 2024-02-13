@@ -38,6 +38,7 @@ progress <- function(n, tag) {
 opts <- list(progress = progress)
 
 n.vec <- 10^(2:6)
+n.init <- 1e4
 p <- 6
 nlag <- 1
 
@@ -86,6 +87,7 @@ seed.n <- 0
 
 for (n in n.vec) {
   print(n)
+  n <- n + n.init
   seed.n <- seed.n + 1
   set.seed(seed.vec[seed.n])
   
@@ -95,6 +97,7 @@ for (n in n.vec) {
   res<-foreach(gu = 1:nsim, .combine = rbind,
                .packages = c("MASS", "Matrix", "hdi", "MultiRNG", "tictoc", "pcalg", "tsutils"), .options.snow = opts) %dorng%{
               
+                
                  psi <- cbind(rt(n, 7) / sqrt(1.4), runif(n, -sqrt(3), sqrt(3)), rt(n, 7) / sqrt(1.4),
                               rexp(n) * (2 * rbinom(n, 1, 0.5) - 1) / sqrt(2), rnorm(n),
                               runif(n, -sqrt(3), sqrt(3)))
@@ -108,6 +111,7 @@ for (n in n.vec) {
                    x[i,] <- As[, , gu] %*% (B1s[, , gu] %*% x[i - 1, ] + psi[i, ])
                  }
                  colnames(x) <- paste("x", 1:p, sep = "")
+                 x <- x[-(1:n.init),]
                  
                  laa <- lin.anc.ts(x, degree = 1)
                  outmat <- laa[[1]]
@@ -127,6 +131,7 @@ for (n in n.vec) {
   names(ind) <- NULL
 
 
+  n <- n - n.init
   simulation <- list(res = res.mat, n = n, ind = ind,
                      r.seed = attr(res, "rng"), "commit" = commit)
   resname <- paste0("results n=", n, " ", format(Sys.time(), "%d-%b-%Y %H.%M"))
