@@ -56,23 +56,26 @@ instant.graph <- function(lin.anc, alpha = 0.05, verbose = FALSE, corr = TRUE){
   }
   preds <- colnames(pv)
   targets <- rownames(pv)
-  if (corr){
-    p <- sum(grepl("\\.0", preds))
+
+  p <- sum(grepl("\\.0", preds))
+  if (p > 0){
     pv <- pv[,1:p]
     colnames(pv) <- gsub("\\.0.*","",colnames(pv))
-    for(ta in targets) pv[ta, ta] <- 1
+  }
+
+  for(ta in targets) pv[ta, ta] <- 1
+  if (corr){
     pv.corr <- holm.corr(pv)
   } else {
     pv.corr <- pv
   }
   anc1 <- pv.corr < alpha
   anc <- p.to.anc(anc1)
-  
   if(sum(sapply(targets, function(ta) anc[ta , ta])) == 0){
     pv.corr[] <- anc
     return(list(rec.ancs = pv.corr, alpha = alpha))
   } else {
-    loop.vars <- loop.vars <- names(which(sapply(targets, function(ta) anc[ta , ta])))
+    loop.vars <- names(which(sapply(targets, function(ta) anc[ta , ta])))
     pvs.mat <- pv.corr[loop.vars, loop.vars]
     pvs.sub <- pvs.mat[pvs.mat < alpha]
     new.alpha <- max(pvs.sub)
