@@ -136,7 +136,7 @@ cx <- 0.75
 png(paste(savefolder, "/z+ROC-noleg.png", sep = ""), width = 600 * plotfac,
 height = 300 * plotfac, res = 75 * plotfac)
 par(mfrow = c(1,2))
-matplot(mean.z[, 1], mean.z[, -1], log ="xy", xlab = "n",
+matplot(mean.z[, 1], mean.z[, -1], log ="xy", xlab = "T",
         ylab = "Average absolute z-statistics",
         pch = 1:pp, col = (1:(lf + 1))[-5], lwd = 2, las = 1)
 # legend("topleft", ncol = 3, legend = labels[ord][1:pp],
