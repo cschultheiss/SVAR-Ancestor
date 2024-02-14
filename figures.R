@@ -2,7 +2,7 @@ require(latex2exp)
 source("helpers-figures.R")
 
 # figures for randomized graph
-folder <- "results/09-Feb-2024 15.02"
+folder <- "results/13-Feb-2024 17.30"
 savefolder <- "Figures/rand-graph-21"
 flz <- list.files(folder)
 load(paste(folder, "/", flz[1], sep = ""))
