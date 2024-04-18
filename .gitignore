@@ -10,3 +10,4 @@ iid-cov.R
 Figures
 *.Rproj
 VARLinGAM
+source-LiNGAM.R
