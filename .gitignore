@@ -8,3 +8,5 @@ results
 codeTimino
 iid-cov.R
 Figures
+*.Rproj
+VARLinGAM
