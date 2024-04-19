@@ -1,5 +1,5 @@
 require(MASS)
-source("~/Documents/ETH/PhD/SVAR-Ancestor/lin-anc-ts.R")
+source("lin-anc-ts.R")
 
 # shift waiting such that it is waiting after erruption
 geyser2 <- data.frame(waiting = geyser$waiting[-1], duration = geyser$duration[-nrow(geyser)])
