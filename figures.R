@@ -7,57 +7,68 @@ folder <- "results/rand-graph-21"
 savefolder <- "Figures/test"
 
 one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE){
-  # alpha: reference value for test
-  # mode: which ancestors to consider, all, inst (instantaneous), lag (lagged),
+  # wrapper function to generate plots from Section 2
+  # Input
+  # folder (string): location where the result files are stored
+  # alpha (numeric): reference value for test
+  # mode (string): which ancestors to consider, all, inst (instantaneous), lag (lagged),
   # lag.dir (lagged with direct edge), lag.indir (lagged without direct edge)
-  # all.cor: correct for not-considered as well?
+  # all.cor (boolean): correct for not-considered as well?
   flz <- list.files(folder)
   load(paste(folder, "/", flz[1], sep = ""))
   lf <- length(flz)
   
+  # columns representing instantaneous effects
   inst.col <- dimnames(simulation$res)[[2]][which(grepl("\\.0", dimnames(simulation$res)[[2]]))]
+  # columns representing lagged effects
   lag.col <- dimnames(simulation$res)[[2]][which(grepl("\\.1", dimnames(simulation$res)[[2]]))]
   
-  p <- length(inst.col)
-  nsim <- dim(simulation$res)[3]
+  p <- length(inst.col) # number of covariates
+  nsim <- dim(simulation$res)[3] # number of simulations
   
   if (any(sapply(flz, function(str) grepl("setup", str)))) {
     load(paste(folder, "/", flz[lf], sep = ""))
+    # read of causal connections
     As <- setup$As
     B1s <- setup$B1s
     lf <- lf - 1
   }
   
+  # encode as binary
   As[abs(As) > 1e-5] <- 1
   As[abs(As) < 1e-5] <- 0
   
   B1s[abs(B1s) > 1e-5] <- 1
   B1s[abs(B1s) < 1e-5] <- 0
   
-  M1s <- B1s
-  Btot <- B1s
+  M1s <- B1s # lagged effect starting with instantaneous edge
+  Btot <- B1s # every way of lagged effect
   for(i in 1:(dim(B1s)[3])){
     M1s[,,i] <- As[,,i] %*% B1s[,,i]
     Btot[,,i] <- M1s[,,i] %*% As[,,i]
   }
   
+  # no self-effects
   for (l in 1:p){
     As[l , l, ] <- NA
   }
   
+  # effects relevant for target
   Asj <- t(As[j, ,])[, -j]
   Btotj <- t(Btot[j, ,])
   B1j <- t(B1s[j, ,])
   M1j <- t(M1s[j, ,])
   
-  TAR.p <- matrix(NA, nsim + 1, 2 * lf)
-  mean.z <- matrix(NA, lf, 5)
+  TAR.p <- matrix(NA, nsim + 1, 2 * lf) # matrix to store detection rate
+  mean.z <- matrix(NA, lf, 5) # matrix to store average z-statistics
   
-  alpha.perf.p <- matrix(NA, 2, lf)
+  alpha.perf.p <- matrix(NA, 2, lf) # matrix to store performance at level alpha
   i <- 0
   for (file in flz[1:lf]) {
+    # loop over sample sizes
     i <- i + 1
     load(paste(folder, "/", file, sep = ""))
+    # z-statistics
     z.inst <- t(simulation$res[j, inst.col,])
     z.lag <- t(simulation$res[j, lag.col,])
     
@@ -71,6 +82,7 @@ one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE
     # non-ancestor
     mean.z[i, 5] <- mean(c(abs(z.inst[,-j])[!Asj], abs(z.lag)[!Btotj]))
     
+    # p-values
     p.inst <- 2 * pnorm(-abs(z.inst[,-j]))
     p.lag <- 2 * pnorm(-abs(z.lag))
     all.p <- cbind(p.inst, p.lag)
@@ -78,11 +90,13 @@ one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE
     non.anc <- cbind(!Asj, !Btotj)
     {switch(mode,
             all = {
+              # consider all ancestors
               anc <- cbind(!!Asj, !!Btotj)
               p.sub <- all.p.adj
             },
             inst = {
               if(!all.cor){
+                # multiplicity correction only over instantaneous
                 all.p.adj <- t(apply(p.inst, 1, holm.corr))
                 non.anc <- !Asj
               }
@@ -91,6 +105,7 @@ one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE
             },
             lag = {
               if(!all.cor){
+                # multiplicity correction only over lagged
                 all.p.adj <- t(apply(p.lag, 1, holm.corr))
                 non.anc <- !Btotj
               }
@@ -112,11 +127,14 @@ one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE
               p.sub <- all.p.adj[,colnames(all.p.adj) %in% lag.col]
             })}
     non.anc[!non.anc] <- NA
+    # minimum p-value leading to wrong rejection
     p.min <- apply(all.p.adj * non.anc, 1, min, na.rm = TRUE)
     lims.p <- c(0, sort(p.min))
+    # power and FWER at each limit
     pwr <- sapply(lims.p, function(lim) mean(p.sub[anc] < lim, na.rm = TRUE))
-    FWER <- sapply(lims.p, function(l) mean(lims.p < l))
-    TAR.p[,c(i , lf + i)] <- c(FWER, pwr)
+    FWER <- sapply(lims.p, function(lim) mean(lims.p < lim))
+    TAR.p[,c(i , lf + i)] <- c(FWER, pwr) # ROC
+    # power and FWER at alpha
     alpha.perf.p[,i] <- c(mean(p.min < alpha), mean(p.sub[anc] < alpha, na.rm = TRUE))
   }
   
@@ -128,82 +146,98 @@ one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE
   ord <- matrix(1:pp, nrow = 2, ncol = 3, byrow = T)
   
   par(mfrow = c(1,2))
+  # plot z-statistics
   matplot(mean.z[, 1], mean.z[, -1], log ="xy", xlab = "T",
           ylab = "Average absolute z-statistics",
           pch = 1:pp, col = (1:(lf + 1))[-5], lwd = 2, las = 1)
-  # legend("topleft", ncol = 3, legend = labels[ord][1:pp],
-  # pch = (1:pp)[ord], col = (1:(lf + 1))[-5][ord], pt.lwd = 2)
+
   which.line <- c(1:3)
   for (wl in which.line){
+    # plot root-n growth if applicable.
     lines(mean.z[, 1], sqrt(mean.z[, 1]) * mean.z[4, wl + 1] / sqrt(mean.z[4, 1]), lty = 2, col = "grey")
   }
-  abline(h = sqrt(2 / pi), lty = 2, col =" grey")
+  abline(h = sqrt(2 / pi), lty = 2, col =" grey") # absolute moment of standard normal
   
+  # plot ROC
   matplot(TAR.p[, 1:lf], TAR.p[,lf + (1:lf)], type = "s", xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
           col = (1:(lf + 1))[-5], las = 1, xlim = c(0, max(TAR.p[,1:lf])), ylim = c(0, 1))
+  # add performance at alpha
   points(alpha.perf.p[1, ], alpha.perf.p[2, ], col = (1:(lf + 1))[-5], pch = 3)
+  # plot target alpha
   lines(c(alpha, alpha), c(0, 1), col = "gray", lty = 2)
-  
-  # legend('bottomright', col = (1:(lf + 1))[-5], ncol = 1, lwd = 2, legend = labels.roc[-lf], lty = (1:(lf + 1)))
 }
 
 plotfac <- 4
-png(paste(savefolder, "/z+ROC-noleg.png", sep = ""), width = 600 * plotfac,
-    height = 300 * plotfac, res = 75 * plotfac)
+# png(paste(savefolder, "/z+ROC-noleg.png", sep = ""), width = 600 * plotfac,
+#     height = 300 * plotfac, res = 75 * plotfac)
 one_target(folder)
-dev.off()
+# dev.off()
 
 network <- function(folder, alpha = 0.05){
+  # wrapper function to generate plots from Section 2
+  # Input
+  # folder (string): location where the result files are stored
+  # alpha (numeric): reference value for test
   flz <- list.files(folder)
   load(paste(folder, "/", flz[1], sep = ""))
   lf <- length(flz)
   
+  # columns representing instantaneous effects
   inst.col <- dimnames(simulation$res)[[2]][which(grepl("\\.0", dimnames(simulation$res)[[2]]))]
+  # columns representing lagged effects
   lag.col <- dimnames(simulation$res)[[2]][which(grepl("\\.1", dimnames(simulation$res)[[2]]))]
   
-  p <- length(inst.col)
-  nsim <- dim(simulation$res)[3]
+  p <- length(inst.col) # number of covariates
+  nsim <- dim(simulation$res)[3] # number of simulations
   
   if (any(sapply(flz, function(str) grepl("setup", str)))) {
     load(paste(folder, "/", flz[lf], sep = ""))
+    # read of causal connections
     As <- setup$As
     B1s <- setup$B1s
     lf <- lf - 1
   }
   
+  # encode as binary
   As[abs(As) > 1e-5] <- 1
   As[abs(As) < 1e-5] <- 0
   
   B1s[abs(B1s) > 1e-5] <- 1
   B1s[abs(B1s) < 1e-5] <- 0
   
-  M1s <- B1s
-  Btot <- B1s
+  M1s <- B1s # lagged effect starting with instantaneous edge
+  Btot <- B1s # every way of lagged effect
   for(i in 1:(dim(B1s)[3])){
     M1s[,,i] <- As[,,i] %*% B1s[,,i]
     Btot[,,i] <- M1s[,,i] %*% As[,,i]
   }
   
+  # no self-effects
   for (l in 1:p){
     As[l , l, ] <- NA
   }
   
+  # combine instantaneous and lagged ancestors
   all.anc <- pmax(As, Btot, na.rm = TRUE) > 0
   dimnames(all.anc)[[1]] <- dimnames(all.anc)[[2]] <- dimnames(simulation$res)[[1]]
+  # recursively get all
   all.anc[] <- apply(all.anc, 3, p.to.anc)
   non.anc <- !all.anc
   non.anc[all.anc] <- NA
   all.anc[!all.anc] <- NA
   
   for (j in 1:p){
+    # self-effects not considered
     all.anc[j, j,] <- non.anc[j, j,] <- NA
   }
   
+  # consider only instantaneous
   inst.anc <- As
   inst.anc[!inst.anc] <- NA
   non.inst.anc <- !As
   non.inst.anc[!non.inst.anc] <- NA
   
+  # list for the different analysis
   TARs <- list()
   alpha.inds <- list()
   
@@ -213,58 +247,67 @@ network <- function(folder, alpha = 0.05){
     } else {
       cat("Analysing summary graphs")
     }
-    TAR <- matrix(NA, nsim + 2, 2 * lf)
-    alpha.ind <- integer(lf)
+    TAR <- matrix(NA, nsim + 2, 2 * lf) # matrix to store ROC
+    alpha.ind <- integer(lf) # vector to find alpha performance
     i <- 0
     for (file in flz[1:lf]) {
+      # loop over files
       i <- i + 1
       load(paste(folder, "/", file, sep = ""))
       cat("\n", "T: ", simulation$n, "\n")
-      z <- simulation$res
-      pv <- 2 * pnorm(-abs(z))
+      z <- simulation$res # z-statistics
+      pv <- 2 * pnorm(-abs(z)) # p-values
       if (s == 1){
-        inst.pv <- pv[,inst.col,]
+        inst.pv <- pv[,inst.col,] # instantaneous effects
         dimnames(inst.pv)[[2]] <- dimnames(inst.pv)[[1]]
         for (j in 1:p){
           inst.pv[j, j,] <- 1
         }
+        # multiplicity correction
         pv.adj <- inst.pv
         pv.adj[] <- apply(inst.pv, 3, function(pv) holm.corr(pv, cut = TRUE))
-        # pv.nonanc <- t(apply(pv.adj, 3, function(pv) pv[which(!ancmat)]))
         
+        # lowest p-value for null
         p.min <- pmin(apply(pv.adj * non.inst.anc, 3, min, na.rm = TRUE))
         lims <- sort(unique(c(0, alpha, p.min)))
         alpha.ind[i] <- which(lims == alpha)
         
+        # find output structures at different alphas
         stru <- stru.anc <- stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], length(lims), nsim))
         stru[] <- apply(pv.adj, 3, find.instant.structures, lims = lims)
         for (k in 1:length(lims)){
-          stru.anc[,,k,] <- stru[,,k,] * inst.anc
-          stru.nonanc[,,k,] <- stru[,,k,] * non.inst.anc
+          stru.anc[,,k,] <- stru[,,k,] * inst.anc # non-ancestors not considered
+          stru.nonanc[,,k,] <- stru[,,k,] * non.inst.anc # ancestors not considered
         }
+        # power and FWER
         pwr <- apply(stru.anc, 3, mean, na.rm = TRUE)
         FWER <- apply(apply(stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
         
         TAR[1:length(lims),c(i, lf + i)] <- c(FWER, pwr)
       } else if (s == 2){
+        # summary effects
         sum.pv <- pv[,inst.col,]
         dimnames(sum.pv)[[2]] <- dimnames(sum.pv)[[1]]
+        # get summary p-values
         sum.pv[] <- apply(pv, 3, summary.p.val)
+        # multiplicity correction
         pv.adj <- sum.pv
         pv.adj[] <- apply(sum.pv, 3, function(pv) holm.corr(pv, cut = TRUE))
-        # pv.nonanc <- t(apply(pv.adj, 3, function(pv) pv[which(!ancmat)]))
         
+        # lowest p-value for null        
         p.min <- pmin(apply(pv.adj * non.anc, 3, min, na.rm = TRUE))
         lims <- sort(unique(c(0, alpha, p.min)))
         lims <- lims[is.finite(lims)]
         alpha.ind[i] <- which(lims == alpha)
         
+        # find output structures at different alphas
         stru <- stru.anc <- stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], length(lims), nsim))
         stru[] <- apply(pv.adj, 3, find.structures, lims = lims)
         for (k in 1:length(lims)){
-          stru.anc[,,k,] <- stru[,,k,] * all.anc
-          stru.nonanc[,,k,] <- stru[,,k,] * non.anc
+          stru.anc[,,k,] <- stru[,,k,] * all.anc # non-ancestors not considered
+          stru.nonanc[,,k,] <- stru[,,k,] * non.anc # ancestors not considered
         }
+        # power and FWER
         pwr <- apply(stru.anc, 3, mean, na.rm = TRUE)
         FWER <- apply(apply(stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
         
@@ -280,18 +323,22 @@ network <- function(folder, alpha = 0.05){
   
   par(mfrow = c(1,2))
   for (s in 1:2){
+    # read off from lists
     TAR <- TARs[[s]]
     alpha.ind <- alpha.inds[[s]]
+    # plot ROC
     matplot(TAR[,1:lf], TAR[,lf + (1:lf)], type = "s",
             xlim = c(0, max(TAR[,1:lf], na.rm = TRUE)), ylim = c(0,1), xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
             col = (1:p)[-5], las = 1)
+    # add performance at alpha
     points(diag(TAR[alpha.ind,1:lf]), diag(TAR[alpha.ind,lf + (1:lf)]),
            col = (1:p)[-5], pch = 3)
+    # plot target alpha
     lines(c(alpha, alpha), c(0, 1), col = "gray", lty = 2)
   }
 }
 
-png(paste(savefolder, "/ROC-graph-noleg.png", sep = ""), width = 600 * plotfac,
-height = 300 * plotfac, res = 75 * plotfac)
+# png(paste(savefolder, "/ROC-graph-noleg.png", sep = ""), width = 600 * plotfac,
+# height = 300 * plotfac, res = 75 * plotfac)
 network(folder)
-dev.off()
+# dev.off()
