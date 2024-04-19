@@ -2,7 +2,7 @@ require(latex2exp)
 source("helpers-figures.R")
 
 # figures for randomized graph
-folder <- "results/13-Feb-2024 17.30"
+folder <- "results/rand-graph-21"
 savefolder <- "Figures/rand-graph-21"
 flz <- list.files(folder)
 load(paste(folder, "/", flz[1], sep = ""))
@@ -240,8 +240,8 @@ TARs[[s]] <- TAR
 alpha.inds[[s]] <- alpha.ind
 }
 
-png(paste(savefolder, "/ROC-graph-noleg.png", sep = ""), width = 600 * plotfac,
-height = 300 * plotfac, res = 75 * plotfac)
+# png(paste(savefolder, "/ROC-graph-noleg.png", sep = ""), width = 600 * plotfac,
+# height = 300 * plotfac, res = 75 * plotfac)
 par(mfrow = c(1,2))
 for (s in 1:2){
   TAR <- TARs[[s]]
@@ -253,4 +253,4 @@ for (s in 1:2){
          col = (1:p)[-5], pch = 3)
   lines(c(0.05, 0.05), c(0, 1), col = "gray", lty = 2)
 }
-dev.off()
+# dev.off()
