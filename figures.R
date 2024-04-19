@@ -4,7 +4,7 @@ source("helpers-figures.R")
 # figures for randomized graph
 
 folder <- "results/rand-graph-21"
-savefolder <- "Figures/rand-graph-21"
+savefolder <- "Figures/test"
 
 one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE){
   # alpha: reference value for test
@@ -126,9 +126,6 @@ one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE
   labels <- eval(parse(text = paste("c(", paste("TeX('$X_{", var.ind.label, "}$')", sep = "", collapse = ","), ")")))
   labels.roc <- eval(parse(text = paste("c(", paste("TeX('$n=10^", 2:6, "$')", sep = "", collapse = ","), ")")))
   ord <- matrix(1:pp, nrow = 2, ncol = 3, byrow = T)
-  plotfac <- 4
-  pointfrac <- 0.8
-  cx <- 0.75
   
   par(mfrow = c(1,2))
   matplot(mean.z[, 1], mean.z[, -1], log ="xy", xlab = "T",
@@ -150,6 +147,7 @@ one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE
   # legend('bottomright', col = (1:(lf + 1))[-5], ncol = 1, lwd = 2, legend = labels.roc[-lf], lty = (1:(lf + 1)))
 }
 
+plotfac <- 4
 png(paste(savefolder, "/z+ROC-noleg.png", sep = ""), width = 600 * plotfac,
     height = 300 * plotfac, res = 75 * plotfac)
 one_target(folder)
@@ -210,13 +208,18 @@ network <- function(folder, alpha = 0.05){
   alpha.inds <- list()
   
   for (s in 1:2){
+    if(s == 1){
+      cat("Analysing instantaneous effects")
+    } else {
+      cat("Analysing summary graphs")
+    }
     TAR <- matrix(NA, nsim + 2, 2 * lf)
     alpha.ind <- integer(lf)
     i <- 0
     for (file in flz[1:lf]) {
       i <- i + 1
-      cat("\n", i, "\n")
       load(paste(folder, "/", file, sep = ""))
+      cat("\n", "T: ", simulation$n, "\n")
       z <- simulation$res
       pv <- 2 * pnorm(-abs(z))
       if (s == 1){
@@ -284,11 +287,11 @@ network <- function(folder, alpha = 0.05){
             col = (1:p)[-5], las = 1)
     points(diag(TAR[alpha.ind,1:lf]), diag(TAR[alpha.ind,lf + (1:lf)]),
            col = (1:p)[-5], pch = 3)
-    lines(c(0.05, 0.05), c(0, 1), col = "gray", lty = 2)
+    lines(c(alpha, alpha), c(0, 1), col = "gray", lty = 2)
   }
 }
 
-# png(paste(savefolder, "/ROC-graph-noleg.png", sep = ""), width = 600 * plotfac,
-# height = 300 * plotfac, res = 75 * plotfac)
+png(paste(savefolder, "/ROC-graph-noleg.png", sep = ""), width = 600 * plotfac,
+height = 300 * plotfac, res = 75 * plotfac)
 network(folder)
-# dev.off()
+dev.off()
