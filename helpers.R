@@ -78,6 +78,37 @@ p.to.anc <- function(pmat) {
   return(ancmat)
 }
 
+instant.p.val <- function(lin.anc){
+  # function to get the instant graph
+  # Input
+  # lin.anc: full output from lin.anc.ts() or only p-values
+  # alpha (numeric): significance level
+  # verbose (boolean): should information be printed?
+  # corr (boolean): is multiplicity correction required?
+  # Ouptut
+  # numeric matrix: p-values for instantaneous effects
+  
+  # check input format
+  if(is.list(lin.anc)) {
+    pv <- lin.anc$p.val
+  } else {
+    pv <- lin.anc
+  }
+  
+  # get variable names
+  preds <- colnames(pv)
+  targets <- rownames(pv)
+  
+  p <- sum(grepl("\\.0", preds)) # number of instant predictors
+  if (p > 0){
+    pv <- pv[,1:p] # instant p-values
+    colnames(pv) <- gsub("\\.0.*","",colnames(pv)) # shorten column names
+  }
+  
+  for(ta in targets) pv[ta, ta] <- 1 # no self-effects
+  return(pv)
+}
+
 instant.graph <- function(lin.anc, alpha = 0.05, verbose = FALSE, corr = TRUE){
   # function to get the instant graph
   # Input
@@ -90,24 +121,9 @@ instant.graph <- function(lin.anc, alpha = 0.05, verbose = FALSE, corr = TRUE){
   # rec.ancs (boolean, matrix): indicator whether one variable affects another instantaneously
   # alpha (numeric): significance level to avoid cycles
   
-  # check input format
-  if(is.list(lin.anc)) {
-    pv <- lin.anc$p.val
-  } else {
-    pv <- lin.anc
-  }
-  
-  # get variable names
-  preds <- colnames(pv)
+  pv <- instant.p.val(lin.anc)
   targets <- rownames(pv)
-
-  p <- sum(grepl("\\.0", preds)) # number of instant predictors
-  if (p > 0){
-    pv <- pv[,1:p] # instant p-values
-    colnames(pv) <- gsub("\\.0.*","",colnames(pv)) # shorten column names
-  }
-
-  for(ta in targets) pv[ta, ta] <- 1 # no self-effects
+  
   # apply Bonferroni-Holm if needed
   if (corr){
     pv.corr <- holm.corr(pv)
