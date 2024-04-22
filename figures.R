@@ -170,7 +170,7 @@ one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE
 plotfac <- 4
 # png(paste(savefolder, "/z+ROC-noleg.png", sep = ""), width = 600 * plotfac,
 #     height = 300 * plotfac, res = 75 * plotfac)
-one_target(folder)
+# one_target(folder)
 # dev.off()
 
 network <- function(folder, alpha = 0.05){
@@ -340,5 +340,5 @@ network <- function(folder, alpha = 0.05){
 
 # png(paste(savefolder, "/ROC-graph-noleg.png", sep = ""), width = 600 * plotfac,
 # height = 300 * plotfac, res = 75 * plotfac)
-network(folder)
+# network(folder)
 # dev.off()

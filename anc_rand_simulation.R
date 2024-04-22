@@ -19,7 +19,7 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4){
   require(expm)
   require(pcalg)
   
-  source('lin-anc-ts.R')
+  source('lin-anc-ts.R', local = TRUE)
   
   commit <- revparse_single(revision = "HEAD")
   print(paste("Run on commit", commit$sha, 'i.e.:', commit$summary))
