@@ -149,6 +149,6 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4){
   }
   return(paste("results/", newdir, sep = ""))
 }
-
+rand_simulation()
 
 
