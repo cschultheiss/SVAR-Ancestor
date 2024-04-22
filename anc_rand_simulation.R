@@ -7,16 +7,13 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4){
   # n.init (integer): number of burn-in samples
   # Output (string): save location of the results folder
   
-  require(MASS)
-  require(hdi)
-  require(Matrix)
+
   require(tictoc)
   require(doRNG)
   require(doSNOW)
   require(parallel)
   require(MultiRNG)
   require(git2r)
-  require(expm)
   require(pcalg)
   
   source('lin-anc-ts.R', local = TRUE)
@@ -100,7 +97,7 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4){
     registerDoSNOW(cl)
     tic()
     res<-foreach(gu = 1:nsim, .combine = rbind,
-                 .packages = c("MASS", "Matrix", "hdi", "MultiRNG", "tictoc", "pcalg", "tsutils"), .options.snow = opts) %dorng%{
+                 .packages = c("tsutils"), .options.snow = opts) %dorng%{
                    
                    
                    psi <- cbind(rt(n, 7) / sqrt(1.4), runif(n, -sqrt(3), sqrt(3)), rt(n, 7) / sqrt(1.4),
