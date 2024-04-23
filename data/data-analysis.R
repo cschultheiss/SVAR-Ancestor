@@ -16,7 +16,6 @@ instant.graph(la_geyser2)
 summary.p.val(la_geyser2)
 summary.graph(la_geyser2)
 
-
 # analyze gas furnace data
 # data should be stored in data/gas-furnace.csv available from https://openmv.net/info/gas-furnace
 gas_furnace <- read.csv("data/gas-furnace.csv")
