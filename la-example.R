@@ -1,12 +1,11 @@
 source("lin-anc-ts.R")
-source("source-LiNGAM.R")
 nrep <- 1e3
 n <- 1e3
 p <- 3
 deg <- 1
 ptot <- p * (deg + 1)
 zv <- pv <- array(NA, c(nrep, p, ptot))
-# lg <- array(NA, c(nrep, p, p))
+
 for (r in 1:nrep){
   eps1 <- rnorm(n)
   eps1 <- sign(eps1) * abs(eps1)^1.0
@@ -28,29 +27,21 @@ for (r in 1:nrep){
   lat <- lin.anc.ts(xx, deg)
   pv[r,,] <- lat$p.val
   zv[r,,] <- lat$z.val
-  # X_can <- tsdata2canonicalform(xx,deg) # put data into canonical form
-  # result <- VARLiNGAM(X_can, est_meth="ols", ntests=FALSE, pruning=TRUE)
-  # lg[r,,] <- result$Bhat[[1]]
 }
 dimnames(pv) <- dimnames(zv) <- list(1:nrep, rownames(lat$p.val), colnames(lat$p.val))
 pvp <- aperm(pv, c(2, 3, 1))
 
 spv <- array(NA, c(dim(summary.p.val(pvp[,,1])), nrep))
 dimnames(spv) <- append(dimnames(summary.p.val(pvp[,,1])), list(1:nrep))
-ig <- sg <- spv
+ig <- sg <- ipv <- spv
 spv[] <- apply(pvp, 3, summary.p.val)
+ipv[] <- apply(pvp, 3, instant.p.val)
 sg[] <- apply(pvp, 3, summary.graph)
 ig[] <- apply(pvp, 3, function(p) instant.graph(p)$rec.ancs)
-# par(mfrow = c(p, deg + 1))
-# for(j in 1:p){
-#   for(k in 1:ptot){
-#     plot.ecdf(pv[,j,k], main = paste(dimnames(pv)[[3]][k], "on", dimnames(pv)[[2]][j]))
-#   }
-# }
+
 
 apply(pv, 2:3, median)
 apply(spv, 1:2, median)
 apply(sg, 1:2, mean)
 apply(ig, 1:2, mean)
 
-# apply(lg != 0, 2:3, mean)
