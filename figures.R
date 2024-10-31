@@ -231,11 +231,20 @@ network <- function(folder, alpha = 0.05){
     all.anc[j, j,] <- non.anc[j, j,] <- NA
   }
   
+  # to and from hidden not considered hardcoded
+  all.anc[p, , ] <- NA
+  all.anc[, p, ] <- NA
+  
+  
   # consider only instantaneous
   inst.anc <- As
   inst.anc[!inst.anc] <- NA
   non.inst.anc <- !As
   non.inst.anc[!non.inst.anc] <- NA
+  
+  # to and from hidden not considered hardcoded
+  inst.anc[p, , ] <- NA
+  inst.anc[, p, ] <- NA
   
   # list for the different analysis
   TARs <- list()

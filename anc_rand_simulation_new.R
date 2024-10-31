@@ -1,5 +1,21 @@
 rm(list = ls(all = TRUE))
-rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6, mc.cores = 16){
+rand.dist <- function(n, type){
+  switch (type,
+          rt(n, 7) / sqrt(1.4), 
+          runif(n, -sqrt(3), sqrt(3)), 
+          rt(n, 7) / sqrt(1.4), 
+          rexp(n) * (2 * rbinom(n, 1, 0.5) - 1) / sqrt(2), 
+          rnorm(n), 
+          runif(n, -sqrt(3), sqrt(3))
+  )
+}
+
+sample.rand.dist <- function(n, type.vec = 1:6){
+  sapply(type.vec, rand.dist, n = n)
+}
+
+
+rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6, mc.cores = 16, h = 0){
   # when called executes the simulation for Section 4
   # Input
   # nsim (integer): number of simulation runs per sample size
@@ -50,7 +66,6 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
   print(seed.vec) # 3588 3052 2252 5257 8307
   
   As <- B1s <- array(0, c(p, p, nsim)) # to store effect matrices
-  pers <- matrix(NA, p, nsim) # to store permutations of the error distributions
   for (s in 1:nsim){
     rd <- randomDAG(p, 0.2, lB = 0.5, uB = 1) # create a random DAG
     
@@ -60,8 +75,6 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
         B[i,j] <- max(0, rd@edgeData@data[[paste(j,"|",i, sep="")]]$weight) # store edge weights
       }
     }
-    
-    pers[, s] <- sample.int(p) # random permutation
     
     A <- solve(diag(p) - B) # total effects
     for (j in 2:p){
@@ -83,7 +96,7 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
     }
     B1s[,, s] <- B1
   }
-  setup <- list(As = As, B1s = B1s, pers = pers)
+  setup <- list(As = As, B1s = B1s)
   
   resname <- paste0("setup ", format(Sys.time(), "%d-%b-%Y %H.%M"))
   if (save) save(setup, file = paste("results/", newdir, "/", resname, ".RData", sep = ""))
@@ -98,17 +111,11 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
     
     cl<-makeSOCKcluster(mc.cores) 
     registerDoSNOW(cl)
+    clusterExport(cl = cl, c('sample.rand.dist', 'rand.dist'))
     tic()
     res<-foreach(gu = 1:nsim, .combine = rbind,
                  .packages = c("tsutils"), .options.snow = opts) %dorng%{
-                   
-                   
-                   psi <- cbind(rt(n, 7) / sqrt(1.4), runif(n, -sqrt(3), sqrt(3)), rt(n, 7) / sqrt(1.4),
-                                rexp(n) * (2 * rbinom(n, 1, 0.5) - 1) / sqrt(2), rnorm(n),
-                                runif(n, -sqrt(3), sqrt(3))) # get noise
-                   
-                   # permute distribution
-                   psi <- psi[, pers[, gu]]
+                   psi <- sample.rand.dist(n, sample(1:6, p, replace = T)) # get noise
                    
                    x <- psi
                    # generate data from SVAR
@@ -119,8 +126,20 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
                    colnames(x) <- paste("x", 1:p, sep = "")
                    x <- x[-(1:n.init),] # discard burn-in
                    
-                   laa <- lin.anc.ts(x, degree = 1) # apply ancestor regression
-                   outmat <- laa[[1]] # store test statistics
+                   laa <- lin.anc.ts(x[, 1:(p-h)], degree = 1) # apply ancestor regression
+                   z.val <- laa[[1]]
+                   
+                   if(h != 0){# only works for degree = 1
+                     z.val <- cbind(z.val[, 1:(p-h)], matrix(0, nrow = p-h, ncol = h), 
+                                    z.val[, (p-h+1):(2*(p-h))], matrix(0, nrow = p-h, ncol = h))
+                     
+                     colnames(z.val)[c((p-h+1):p, (2*p-h+1):(2*p))] <- c(paste0('x', (p-h+1):p, '.0'), 
+                                                                          paste0('x', (p-h+1):p, '.1'))
+                     z.val <- rbind(z.val, matrix(0, nrow = h, ncol = 2*p))
+                     row.names(z.val)[(p-h+1):p] <- paste0('x', (p-h+1):p)
+                   }
+                   
+                   outmat <- z.val # store test statistics
                    
                    out <- list()
                    out$res <- outmat
@@ -154,5 +173,7 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
   }
   return(paste("results/", newdir, sep = ""))
 }
+
+rand_simulation(mc.cores = 10, p = 10, h = 1)
 
 
