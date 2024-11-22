@@ -196,6 +196,8 @@ network <- function(folder, alpha = 0.05){
     As <- setup$As
     B1s <- setup$B1s
     lf <- lf - 1
+    hidden <- setup$hidden
+    hidden_lagged <- setup$hidden_lagged
   }
   
   # encode as binary
@@ -231,20 +233,26 @@ network <- function(folder, alpha = 0.05){
     all.anc[j, j,] <- non.anc[j, j,] <- NA
   }
   
-  # to and from hidden not considered hardcoded
-  all.anc[p, , ] <- NA
-  all.anc[, p, ] <- NA
-  
-  
   # consider only instantaneous
   inst.anc <- As
   inst.anc[!inst.anc] <- NA
   non.inst.anc <- !As
   non.inst.anc[!non.inst.anc] <- NA
   
-  # to and from hidden not considered hardcoded
-  inst.anc[p, , ] <- NA
-  inst.anc[, p, ] <- NA
+  if(hidden[1, 1] <= p){
+    # to and from hidden not considered
+    for(i in 1:nrow(hidden)){
+      idx <- hidden[i, ]
+      all.anc[idx, , i] <- NA
+      all.anc[, idx, i] <- NA
+      
+      inst.anc[idx, , i] <- NA
+      inst.anc[, idx, i] <- NA
+      
+      non.inst.anc[idx, , i] <- NA
+      non.inst.anc[, idx, i] <- NA      
+    }
+  }
   
   # list for the different analysis
   TARs <- list()
@@ -274,7 +282,7 @@ network <- function(folder, alpha = 0.05){
         }
         # multiplicity correction
         pv.adj <- inst.pv
-        pv.adj[] <- apply(inst.pv, 3, function(pv) holm.corr(pv, cut = TRUE))
+        pv.adj[-hidden, -hidden_lagged, ] <- apply(inst.pv[-hidden, -hidden_lagged, ], 3, function(pv) holm.corr(pv, cut = TRUE))
         
         # lowest p-value for null
         p.min <- pmin(apply(pv.adj * non.inst.anc, 3, min, na.rm = TRUE))
@@ -301,7 +309,7 @@ network <- function(folder, alpha = 0.05){
         sum.pv[] <- apply(pv, 3, summary.p.val)
         # multiplicity correction
         pv.adj <- sum.pv
-        pv.adj[] <- apply(sum.pv, 3, function(pv) holm.corr(pv, cut = TRUE))
+        pv.adj[-hidden, -hidden_lagged, ] <- apply(sum.pv[-hidden, -hidden_lagged, ], 3, function(pv) holm.corr(pv, cut = TRUE))
         
         # lowest p-value for null        
         p.min <- pmin(apply(pv.adj * non.anc, 3, min, na.rm = TRUE))

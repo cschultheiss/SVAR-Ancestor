@@ -94,9 +94,17 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
     if(eig.max > 0.95){
       B1 <- B1 / eig.max * 0.95
     }
-    B1s[,, s] <- B1
+    B1s[, , s] <- B1
   }
-  setup <- list(As = As, B1s = B1s)
+  
+  if(h != 0){
+    hidden <- matrix(replicate(nsim, sample(1:p, h)), ncol = h, byrow = T)
+    hidden_lagged <- t(apply(hidden, 1, function(hid) c(sapply(0:nlag, function(lag) hid + p * lag))))
+  }else{
+    hidden <- matrix(p+1, nrow = nsim)
+    hidden_lagged <- hidden
+  }
+  setup <- list(As = As, B1s = B1s, hidden = hidden, hidden_lagged = hidden_lagged)
   
   resname <- paste0("setup ", format(Sys.time(), "%d-%b-%Y %H.%M"))
   if (save) save(setup, file = paste("results/", newdir, "/", resname, ".RData", sep = ""))
@@ -105,7 +113,7 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
   
   for (n in n.vec) {
     print(n)
-    n <- n + n.init # total sample size including burnin
+    n <- n + n.init # total sample size including burn-in
     seed.n <- seed.n + 1
     set.seed(seed.vec[seed.n])
     
@@ -125,18 +133,16 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
                    }
                    colnames(x) <- paste("x", 1:p, sep = "")
                    x <- x[-(1:n.init),] # discard burn-in
+                   print(gu)
+                   laa <- lin.anc.ts(x[, -hidden[gu, ]], degree = nlag) # apply ancestor regression  #random h
                    
-                   laa <- lin.anc.ts(x[, 1:(p-h)], degree = 1) # apply ancestor regression
-                   z.val <- laa[[1]]
-                   
-                   if(h != 0){# only works for degree = 1
-                     z.val <- cbind(z.val[, 1:(p-h)], matrix(0, nrow = p-h, ncol = h), 
-                                    z.val[, (p-h+1):(2*(p-h))], matrix(0, nrow = p-h, ncol = h))
-                     
-                     colnames(z.val)[c((p-h+1):p, (2*p-h+1):(2*p))] <- c(paste0('x', (p-h+1):p, '.0'), 
-                                                                          paste0('x', (p-h+1):p, '.1'))
-                     z.val <- rbind(z.val, matrix(0, nrow = h, ncol = 2*p))
-                     row.names(z.val)[(p-h+1):p] <- paste0('x', (p-h+1):p)
+                   if(h == 0){
+                     z.val <- laa[[1]]
+                   }else{
+                    z.val <- matrix(0, nrow = p, ncol = p * (1 + nlag))
+                    z.val[-hidden[gu, ], -hidden_lagged[gu, ]] <- laa[[1]]
+                    colnames(z.val) <- paste0('x', 1:p, '.', rep(0:nlag, each = p))
+                    row.names(z.val) <- paste0('x', 1:p)
                    }
                    
                    outmat <- z.val # store test statistics
