@@ -3,7 +3,7 @@ source("helpers-figures.R")
 
 # figures for randomized graph
 
-folder <- "results/6"
+folder <- "results/test"
 savefolder <- "Figures/test"
 
 one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE){
@@ -283,7 +283,7 @@ network <- function(folder, alpha = 0.05){
       b <- simulation$b_res # lingam results
       pv <- 2 * pnorm(-abs(z)) # p-values
       
-      b_pv <- b
+      b_pv <- 2 * pnorm(-abs(b))
       b_pv[b_pv == 0] <- NA
       b_pv[!is.na(b_pv)] <- 0
       b_pv[is.na(b_pv)] <- 1
@@ -360,7 +360,7 @@ network <- function(folder, alpha = 0.05){
         b_stru <- b_stru.anc <- b_stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], 
                                                              1, nsim))
         stru[] <- apply(pv.adj, 3, find.structures, lims = lims)
-        b_stru[] <- apply(sum.b_pv, 3, find.structures, lims = 0.5)
+        b_stru[] <- apply(sum.b_pv, 3, find.structures, lims = 0.01)
         for (k in 1:length(lims)){
           stru.anc[,,k,] <- stru[,,k,] * all.anc # non-ancestors not considered
           stru.nonanc[,,k,] <- stru[,,k,] * non.anc # ancestors not considered

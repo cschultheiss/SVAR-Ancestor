@@ -1,4 +1,4 @@
-boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot) {
+boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot, verbose = FALSE) {
 
   # Bootstrap to get standard errors of coefficients of reduced and structural
   # VAR using VECM with cointegration rank 3, and Cholesky
@@ -40,8 +40,8 @@ boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot) {
 
   start <- proc.time()
   for (i in 1:nboot) {
-
-    if (i%%10==0) {
+    
+    if (verbose && (i%%10==0)) {
       cat("bootstrap run", i, "out of", nboot, "\n")
     }
 
@@ -52,8 +52,8 @@ boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot) {
     Ynew[1:p,] <- as.matrix(Data[1:p,]) # initial time points
     for(ii in (p+1):(t+p)) {
       for(j in 1:p) {
-	Y <- Ahat[[j]] %*% t(Data[ii-j,]) # generate new Data
-	Ynew[ii,] <- Ynew[ii,] + Y 
+	      Y <- Ahat[[j]] %*% t(Data[ii-j,]) # generate new Data
+	      Ynew[ii,] <- Ynew[ii,] + Y 
       }
       Ynew[ii,] <- cons + Ynew[ii,] + unew[ii-p,]
     }
@@ -62,7 +62,7 @@ boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot) {
     Data_can_new <- tsdata2canonicalform(Ynew, p)
 
     # estimate reduced form VAR using a vecm
-    res <- VAR_estim(Data_can_new, "vecm", regstats=FALSE, corank=3)
+    res <- VAR_estim(Data_can_new, "ols", regstats=FALSE, corank=3)
 
     kurt[i,] <- kurtosis(res$resid) # kurtosis of reduced form VAR
     c[i,] <- res$const
@@ -71,10 +71,10 @@ boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot) {
     for (j in 1:p) {
       MM[[j]][i,] <- res$Mhat[[j]]
     }
-
+    
     # calculate instantaneous effects matrix using Cholesky
     B0ch <- choleski(res$resid,ord) # using causal order of original data
-
+    
     # write results columnwise in rows of BB[[j]]
     BB0[i,] <- B0ch
     Gamma0 <- diag(k) - B0ch
@@ -82,7 +82,11 @@ boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot) {
       BB[[j]][i,] <- Gamma0 %*% res$Mhat[[j]]
     }
 
-
+    #significance 6.
+    
+    
+    B0ch**2
+    
   }
   end <- proc.time()
   print(end-start)
@@ -123,7 +127,7 @@ boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot) {
   for (i in 1:p) {
     tstatsMM[[i]] <- Ahat[[i]]/sdMM[[i]]
     tstatsBB[[i]] <- Bhat[[i+1]]/sdBB[[i]]
-    if (i==1 | i==2) {
+    if (verbose && (i==1 | i==2)) {
       cat('\ninformation for A', i, ': coeffs, sd, pvalue, significant\n')
       print(round(Ahat[[i]],4))
       print(round(sdMM[[i]],4))
@@ -137,11 +141,15 @@ boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot) {
     }
   }
   tstatsBB0 <- Bhat[[1]]/sdBB0
-  cat('\ninformation for B0', ': coeffs, sd, pvalue, significant\n')
-  print(round(Bhat[[1]],4))
-  print(round(sdBB0,4))
-  print(2*pt(abs(tstatsBB0),n,lower.tail=FALSE))
-  print(abs(tstatsBB0) > tvalueBs)
-
+  if(verbose){
+    cat('\ninformation for B0', ': coeffs, sd, pvalue, significant\n')
+    print(round(Bhat[[1]],4))
+    print(round(sdBB0,4))
+    print(2*pt(abs(tstatsBB0),n,lower.tail=FALSE))
+    print(abs(tstatsBB0) > tvalueBs)
+  }
+  tstatB <- cbind(tstatsBB0, do.call(cbind, tstatsBB)) 
+  
+  return(list(tstatB = tstatB, df = n-df-1))
 }
 

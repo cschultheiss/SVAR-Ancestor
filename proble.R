@@ -74,16 +74,20 @@ fit
 B
 B1
 
-list.files('/scratch/users/maulmer/Downloads/VARLiNGAM')
+list.files('VARLiNGAM')
 
-source("/scratch/users/maulmer/Downloads/VARLiNGAM/sourcedir.R")
-source("/scratch/users/maulmer/Downloads/VARLiNGAM/main1.R")
-sourceDir("/scratch/users/maulmer/Downloads/VARLiNGAM/", FALSE)
-sourceDir("/scratch/users/maulmer/Downloads/VARLiNGAM/lingam/code", FALSE)
-dat <- tsdata2canonicalform(x,3)
+source("VARLiNGAM/sourcedir.R")
+source("VARLiNGAM/main1.R")
+sourceDir("VARLiNGAM/", FALSE)
+sourceDir("VARLiNGAM/lingam/code", FALSE)
+dat <- tsdata2canonicalform(x,1)
 res <- VARLiNGAM(dat, pruning = FALSE, ntests = FALSE)
+res$Mhat
 res$Bhat
-boot_sd(as.data.frame(x), res$const, res$Mhat, res$Bhat, res$resid, res$var_order, 5, 100)
+boot_res <- boot_sd(as.data.frame(x), res$const, res$Mhat, res$Bhat, res$resid, res$var_order, 1, 100)
+boot_res
+res$Bhat
+laa$p.val < 0.01
 
 Data <-as.data.frame(x)
 cons <- res$const
@@ -91,7 +95,7 @@ Ahat <- res$Mhat
 Bhat <- res$Bhat
 u_res <- res$resid 
 ord <- res$var_order
-p <- 3
+p <- 1
 nboot <- 10
 
 boot_sd_firmgrowth(Growth_can, nboot, result$Mhat, result$Bhat)

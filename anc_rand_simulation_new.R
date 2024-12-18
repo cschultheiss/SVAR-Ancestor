@@ -159,6 +159,7 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
                    out$res <- outmat
                    out$gu <- gu
                    out$b_res <- b.val
+                   out$df <- Lin_laa$df
                    out                           
                  } 
     toc()
@@ -171,10 +172,12 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
     ind <- unlist(res[,"gu"])
     names(ind) <- NULL
     
+    df <- unlist(res[, "df"])
+    names(df) <- NULL
     
     n <- n - n.init # adjust n
     # store results
-    simulation <- list(res = res.mat, b_res = b_res.mat, n = n, ind = ind,
+    simulation <- list(res = res.mat, b_res = b_res.mat, n = n, ind = ind, df = df,
                        r.seed = attr(res, "rng"), "commit" = commit)
     # create unique filename based on sample size and time
     resname <- paste0("results n=", n, " ", format(Sys.time(), "%d-%b-%Y %H.%M"))

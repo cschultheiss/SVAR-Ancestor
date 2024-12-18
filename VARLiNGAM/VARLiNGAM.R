@@ -1,5 +1,5 @@
 VARLiNGAM <- function(Data, est_meth="ols", ntests=TRUE, pruning=TRUE,
-             regstats=FALSE, corank=NA, fmlad=FALSE) {
+             regstats=FALSE, corank=NA, fmlad=FALSE, verbose = FALSE) {
 
   # Estimate a VAR-LiNGAM, see
   # - A. Hyvärinen, S. Shimizu, P.O. Hoyer ((ICML-2008). Causal modelling
@@ -49,7 +49,8 @@ VARLiNGAM <- function(Data, est_meth="ols", ntests=TRUE, pruning=TRUE,
   nvar <- dim(Data)[2] - which(colnames(Data)=="curval1") + 1
   # number of time lags included
   nlags <- (dim(Data)[2] - 2)/nvar - 1
-
+  
+  if(verbose){
   # some information on the input
   cat("\n------------------------ some information ------------------------\n")
   cat("using",nlags,"time lag(s) and estimating VAR using",est_meth,"method\n")
@@ -58,15 +59,16 @@ VARLiNGAM <- function(Data, est_meth="ols", ntests=TRUE, pruning=TRUE,
   # -------------------------------- step 1 --------------------------------- #
 
   cat("estimate VAR ... ")
-
+  }
   VARres <- VAR_estim(Data, est_meth, regstats, corank, fmlad)
-
+  if(verbose){
   cat("Done! \n")
 
 
   # -------------------------------- step 2 --------------------------------- #
 
   cat("calculating residuals ... ")
+  }
 
   nhat <- t(VARres$residuals) 
   dims <- dim(nhat)
@@ -85,8 +87,9 @@ VARLiNGAM <- function(Data, est_meth="ols", ntests=TRUE, pruning=TRUE,
     print(Gauss_Tests(nhat))
 
   }
-
+  if(verbose){
   cat("\nPerform LiNGAM analysis on residuals ... \n")
+  }
 
   if (pruning) {
     # prune results immediately
@@ -109,8 +112,9 @@ VARLiNGAM <- function(Data, est_meth="ols", ntests=TRUE, pruning=TRUE,
     # permute back to original variable order
     B0hat <- B0n[iperm(reslg$k),iperm(reslg$k)]
   }
-
+  if(verbose){
   cat("Done with LiNGAM analysis! \n")
+  }
 
 
   # -------------------------------- step 4 --------------------------------- #
