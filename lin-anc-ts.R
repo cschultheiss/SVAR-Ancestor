@@ -77,10 +77,47 @@ lingam.anc.ts <- function(x, degree, targets = colnames(x), n_boot = 100){
   # p.val (numeric, matrix): p-values
   dat <- tsdata2canonicalform(x,degree)
   res <- VARLiNGAM(dat, pruning = FALSE, ntests = FALSE)
-  boot_res <- boot_sd(as.data.frame(x), res$const, res$Mhat, res$Bhat, res$resid, res$var_order, degree, n_boot)
-  boot_res$tstatB[is.na(boot_res$tstatB)] <- 0
-  colnames(boot_res$tstatB) <- paste(rep(targets, degree + 1), ".", rep(0:degree, each = ncol(x)), sep ="")
-  rownames(boot_res$tstatB) <- targets
+  boot_res <- boot_dist(Data = as.data.frame(x), Bhat = res$Bhat, n_boot)
   return(boot_res)
 }
 
+lingam2.anc.ts <- function(x, degree, targets = colnames(x), n_boot = 100){
+  source("VARLiNGAM/sourcedir.R")
+  source("VARLiNGAM/main1.R")
+  sourceDir("VARLiNGAM/", FALSE)
+  sourceDir("VARLiNGAM/lingam/code", FALSE)
+  # function to perform ancestor regression for SVAR
+  # Input
+  # x (numeric, matrix): the observational data
+  # degree (integer): order of the SVAR process to be considered
+  # targets (character, vector): variables whose ancestors should be estimated, all by default
+  # f (function): non-linearity used for ancestor regression
+  # Output
+  # z.val (numeric, matrix): test statistics
+  # p.val (numeric, matrix): p-values
+  dat <- tsdata2canonicalform(x, degree)
+  res <- VARLiNGAM(dat, pruning = TRUE, ntests = FALSE)
+  return(res)
+}
+
+lingam3.anc.ts <- function(x, degree, targets = colnames(x), n_boot = 100){
+  source("VARLiNGAM/sourcedir.R")
+  source("VARLiNGAM/main1.R")
+  sourceDir("VARLiNGAM/", FALSE)
+  sourceDir("VARLiNGAM/lingam/code", FALSE)
+  # function to perform ancestor regression for SVAR
+  # Input
+  # x (numeric, matrix): the observational data
+  # degree (integer): order of the SVAR process to be considered
+  # targets (character, vector): variables whose ancestors should be estimated, all by default
+  # f (function): non-linearity used for ancestor regression
+  # Output
+  # z.val (numeric, matrix): test statistics
+  # p.val (numeric, matrix): p-values
+  dat <- tsdata2canonicalform(x,degree)
+  res <- VARLiNGAM(dat, pruning = FALSE, ntests = FALSE)
+  boot_res <- boot_sd(Data = as.data.frame(x), cons = res$const, Ahat = res$Mhat, 
+                      Bhat = res$Bhat, u_res = res$resid, ord = res$var_order, 
+                      p = degree, nboot = n_boot)
+  return(boot_res)
+}

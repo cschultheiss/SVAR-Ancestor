@@ -23,8 +23,8 @@ boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot, verbose = FALS
   t <- dims[1] # number of samples
   k <- dims[2] # number of variables
 
-  kurt <- array(0,dim=c(nboot,6)) # to save kurtosis of new residuals
-  c <- array(0,dim=c(nboot,6))
+  kurt <- array(0,dim=c(nboot,p)) # to save kurtosis of new residuals
+  c <- array(0,dim=c(nboot,p))
 
   # to save bootstrap results
   MM <- list()
@@ -64,8 +64,8 @@ boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot, verbose = FALS
     # estimate reduced form VAR using a vecm
     res <- VAR_estim(Data_can_new, "ols", regstats=FALSE, corank=3)
 
-    kurt[i,] <- kurtosis(res$resid) # kurtosis of reduced form VAR
-    c[i,] <- res$const
+    #kurt[i,] <- kurtosis(res$resid) # kurtosis of reduced form VAR
+    #c[i,] <- res$const
 
     # write results columnwise in rows of MM[[j]]
     for (j in 1:p) {
@@ -81,12 +81,6 @@ boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot, verbose = FALS
     for (j in 1:p) {
       BB[[j]][i,] <- Gamma0 %*% res$Mhat[[j]]
     }
-
-    #significance 6.
-    
-    
-    B0ch**2
-    
   }
   end <- proc.time()
   print(end-start)
@@ -149,7 +143,55 @@ boot_sd <- function(Data, cons, Ahat, Bhat, u_res, ord, p, nboot, verbose = FALS
     print(abs(tstatsBB0) > tvalueBs)
   }
   tstatB <- cbind(tstatsBB0, do.call(cbind, tstatsBB)) 
+  Bp <- 2*(1 - pt(abs(tstatB), df = n-df-1))
+  Bp[is.na(Bp) & do.call(cbind, Bhat) == 0] <- 1
+  Bp[is.na(Bp)] <- 0
   
-  return(list(tstatB = tstatB, df = n-df-1))
+  return(Bp)
+}
+
+
+
+boot_dist <- function(Data, Bhat, nboot, verbose = FALSE) {
+  n <- nrow(Data) # number of samples
+  p <- ncol(Data) # number of variables
+  degree <- length(Bhat) - 1
+  
+  S0.boot <- array(NA, dim = c(p, p, nboot))
+  Slag.boot <- array(NA, dim = c(p, p, nboot))
+
+  for (i in 1:nboot) {
+    # generating the artificial data
+    X_new <- apply(Data, 2, function(xj) sample(xj, n, replace = TRUE))
+    X_can_new <- tsdata2canonicalform(X_new, degree)
+    
+    res <- VARLiNGAM(X_can_new, pruning = FALSE, ntests = FALSE)
+    
+    # measure of instantaneous effects
+    S0.boot[, , i] <- S0_f(res$Bhat[[1]], X_new)
+    Slag.boot[, , i] <- Slag_f(res$Bhat, X_new)
+  }
+  
+  return(list(S0 = S0_f(Bhat[[1]], Data), S0.boot = S0.boot, 
+              Slag = Slag_f(Bhat, Data), Slag.boot = Slag.boot))
+}
+
+
+# measure of instantaneous effects
+S0_f <- function(B0, X){
+  x.var <- apply(X, 2, var)
+  X.var.R <- sapply(x.var, function(v) x.var/v) 
+  B0**2 * X.var.R
+}
+
+#measures how strong the total lagged causal influence
+Slag_f <- function(B, X){
+  degree <- length(B)
+  sapply(1:ncol(X), function(j){
+    tauS <- lapply(1:degree, function(tau){
+      sapply(B[[tau]][, j], function(b) b * X[-c(degree-tau, nrow(X)-(tau-1):0), j])
+    })
+    apply(Reduce("+", tauS), 2, var) / apply(X, 2, var)
+  })
 }
 

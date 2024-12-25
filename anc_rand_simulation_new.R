@@ -136,21 +136,29 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
                    x <- x[-(1:n.init),] # discard burn-in
                     
                    laa <- lin.anc.ts(x[, -hidden[gu, ]], degree = nlag) # apply ancestor regression
-                   Lin_laa <- lingam.anc.ts(x[, -hidden[gu, ]], degree = nlag)
+                   Lin_laa <- lingam.anc.ts(x[, -hidden[gu, ]], degree = nlag, n_boot = 100)
+                   Lin <- lingam2.anc.ts(x[, -hidden[gu, ]], degree = nlag)
+                   Lin3 <- lingam3.anc.ts(x[, -hidden[gu, ]], degree = nlag, n_boot = 100)
                    
                    if(h == 0){
                      z.val <- laa[[1]]
-                     b.val <- Lin_laa[[1]]
+                     b.val <- Lin$Bhat[[1]]
+                     b2.val <- Lin3
                    }else{
                     z.val <- matrix(0, nrow = p, ncol = p * (1 + nlag))
                     z.val[-hidden[gu, ], -hidden_lagged[gu, ]] <- laa[[1]]
                     colnames(z.val) <- paste0('x', 1:p, '.', rep(0:nlag, each = p))
                     row.names(z.val) <- paste0('x', 1:p)
                     
-                    b.val <- matrix(0, nrow = p, ncol = p * (1 + nlag))
-                    b.val[-hidden[gu, ], -hidden_lagged[gu, ]] <- Lin_laa[[1]]
-                    colnames(b.val) <- paste0('x', 1:p, '.', rep(0:nlag, each = p))
+                    b.val <- matrix(0, nrow = p, ncol = p)
+                    b.val[-hidden[gu, ], -hidden[gu, ]] <- Lin$Bhat[[1]]
+                    colnames(b.val) <- paste0('x', 1:p)
                     row.names(b.val) <- paste0('x', 1:p)
+                    
+                    b2.val <- matrix(1, nrow = p, ncol = p * (1 + nlag))
+                    b2.val[-hidden[gu, ], -hidden_lagged[gu, ]] <- Lin3
+                    colnames(b2.val) <- paste0('x', 1:p, '.', rep(0:nlag, each = p))
+                    row.names(b2.val) <- paste0('x', 1:p)
                    }
                    
                    outmat <- z.val # store test statistics
@@ -159,25 +167,33 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
                    out$res <- outmat
                    out$gu <- gu
                    out$b_res <- b.val
+                   out$lingam <- Lin_laa
                    out$df <- Lin_laa$df
+                   out$b2_res <- b2.val
                    out                           
                  } 
     toc()
     stopCluster(cl)
     # store output list to matrix
-    res.mat <- array(unlist(res[,"res"]), dim = c(p, (nlag + 1) * p, nsim), dimnames = list(rownames(res[1,"res"][[1]]),
-                                                                                            colnames(res[1,"res"][[1]]), NULL))
-    b_res.mat <- array(unlist(res[,"b_res"]), dim = c(p, (nlag + 1) * p, nsim), dimnames = list(rownames(res[1,"b_res"][[1]]),
-                                                                                            colnames(res[1,"b_res"][[1]]), NULL))
+    res.mat <- array(unlist(res[,"res"]), dim = c(p, (nlag + 1) * p, nsim), 
+                     dimnames = list(rownames(res[1,"res"][[1]]),
+                                     colnames(res[1,"res"][[1]]), NULL))
+    
+    b2_res.mat <- array(unlist(res[,"b2_res"]), dim = c(p, (nlag + 1) * p, nsim), 
+                     dimnames = list(rownames(res[1,"b2_res"][[1]]),
+                                     colnames(res[1,"b2_res"][[1]]), NULL))
+     
+    b_res.mat <- array(unlist(res[,"b_res"]), dim = c(p, p, nsim), dimnames = list(rownames(res[1,"b_res"][[1]]),
+                                                                                          colnames(res[1,"b_res"][[1]]), NULL))
     ind <- unlist(res[,"gu"])
     names(ind) <- NULL
     
-    df <- unlist(res[, "df"])
-    names(df) <- NULL
+    #df <- unlist(res[, "df"])
+    #names(df) <- NULL
     
     n <- n - n.init # adjust n
     # store results
-    simulation <- list(res = res.mat, b_res = b_res.mat, n = n, ind = ind, df = df,
+    simulation <- list(res = res.mat, b_res = b_res.mat, b2_res = b2_res.mat, lingam = res[, "lingam"], n = n, ind = ind,
                        r.seed = attr(res, "rng"), "commit" = commit)
     # create unique filename based on sample size and time
     resname <- paste0("results n=", n, " ", format(Sys.time(), "%d-%b-%Y %H.%M"))
@@ -194,6 +210,6 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
   return(paste("results/", newdir, sep = ""))
 }
 
-rand_simulation(mc.cores = 15, p = 10, h = 1)
+rand_simulation(mc.cores = 20, p = 6, h = 1, nsim = 60, n.vec = 10^(2:3))
 
-
+rand_simulation(mc.cores = 20, p = 6, h = 0)
