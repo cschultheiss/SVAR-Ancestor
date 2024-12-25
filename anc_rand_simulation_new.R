@@ -210,6 +210,4 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
   return(paste("results/", newdir, sep = ""))
 }
 
-rand_simulation(mc.cores = 20, p = 6, h = 1, nsim = 60, n.vec = 10^(2:3))
-
-rand_simulation(mc.cores = 20, p = 6, h = 0)
+rand_simulation(mc.cores = 125, p = 10, h = 1)

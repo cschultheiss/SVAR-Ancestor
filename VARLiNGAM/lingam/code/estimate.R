@@ -47,7 +47,7 @@ estimate <- function( X ) {
   # Try to permute the rows of W so that sum(1./abs(diag(W))) is minimized
   cat('Performing row permutation...\n');
   dims <- nrow(X)
-  if (dims <= 8) {  
+  if (dims <= 50) {  
     cat('(Small dimensionality, using brute-force method.)\n')
     temp <- nzdiagbruteforce( W )
     Wp <- temp$Wopt
