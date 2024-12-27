@@ -3,8 +3,7 @@ source("helpers-figures.R")
 
 # figures for randomized graph
 
-folder <- "results/6_0_no"
-savefolder <- "Figures/test"
+
 
 one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE){
   # wrapper function to generate plots from Section 2
@@ -197,7 +196,11 @@ network <- function(folder, alpha = 0.05){
     B1s <- setup$B1s
     lf <- lf - 1
     hidden <- setup$hidden
-    print(hidden[1])
+    if(hidden[1] > dim(setup$As)[1]){
+      print("no hiddens")
+    }else{
+      print("with hiddens")
+    }
     hidden_lagged <- setup$hidden_lagged
   }
   
@@ -266,6 +269,7 @@ network <- function(folder, alpha = 0.05){
   LINGAM_bl_perf <- list()
   lin.alpha.inds <- list()
   lin2.alpha.inds <- list()
+  n.vec <- c()
   
   for (s in 1:2){
     if(s == 1){
@@ -286,6 +290,7 @@ network <- function(folder, alpha = 0.05){
       i <- i + 1
       load(paste(folder, "/", file, sep = ""))
       cat("\n", "T: ", simulation$n, "\n")
+      
       z <- simulation$res # z-statistics
       b <- simulation$lingam # lingam results
       b2.pv <- simulation$b2_res
@@ -298,6 +303,7 @@ network <- function(folder, alpha = 0.05){
       
       
       if (s == 1){
+        n.vec <- c(n.vec, simulation$n)
         inst.pv <- pv[,inst.col,] # instantaneous effects
         dimnames(inst.pv)[[2]] <- dimnames(inst.pv)[[1]]
         for (j in 1:p){
@@ -557,14 +563,17 @@ network <- function(folder, alpha = 0.05){
   }else{
     par(mfrow = c(1,2))
   }
+  main <- c('Instantaneous effecs', "Summary graph")
   for (s in 1:2){
     # read off from lists
     TAR <- TARs[[s]]
     alpha.ind <- alpha.inds[[s]]
     # plot ROC
     matplot(TAR[-1,1:lf], TAR[-1,lf + (1:lf)], type = "s",
-            xlim = c(0, max(c(TAR[,1:lf]), na.rm = TRUE)), ylim = c(0,1), xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
-            col = (1:p)[-5], las = 1, main = "Ancestor")
+            xlim = c(0, max(c(TAR[,1:lf], 1), na.rm = TRUE)), ylim = c(0,1), 
+            xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
+            col = (1:p)[-5], las = 1)
+    title(main[s], cex.main = 0.9)
     # add performance at alpha
     points(diag(TAR[alpha.ind,1:lf]), diag(TAR[alpha.ind,lf + (1:lf)]),
            col = (1:p)[-5], pch = 3)
@@ -574,6 +583,11 @@ network <- function(folder, alpha = 0.05){
       # add performance of simple pruned lingam
       points(x = LINGAM_bl_perf[[s]][, 2], y = LINGAM_bl_perf[[s]][, 1],
              col = (1:p)[-5], pch = 2)
+      legend("bottomright", legend = c("LiNGAM", expression(alpha ~ "= 0.05")), 
+             pch = 2:3, cex = 0.6)
+    }else{
+      legend("bottomright", legend = paste0("n = ", n.vec), 
+             col = (1:p)[-5], lty = (1:p)[-5], cex = 0.6)
     }
   }
   # lingam with boot
@@ -621,11 +635,19 @@ network <- function(folder, alpha = 0.05){
   }
 }
 
-# png(paste(savefolder, "/ROC-graph-noleg.png", sep = ""), width = 600 * plotfac,
-# height = 300 * plotfac, res = 75 * plotfac)
-# network(folder)
-# dev.off()
+flz <- list.files("results")
 
+for(folder in flz){
+  savefolder <- "Figures/"
+  if(grepl("no", folder, fixed = TRUE)){
+    hfac <- 1
+  }else{
+    hfac <- 3
+  }
+  png(paste(savefolder, folder, ".png", sep = ""), width = 600 * plotfac,
+      height = 300 * plotfac * hfac, res = 75 * plotfac)
+  network(paste0("results/", folder))
+  dev.off()
+}
 
-network('results/test')
 
