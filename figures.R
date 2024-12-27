@@ -3,8 +3,7 @@ source("helpers-figures.R")
 
 # figures for randomized graph
 
-folder <- "results/25-Dez-2024 15.34"
-savefolder <- "Figures/test"
+
 
 one_target <- function(folder, j = 4, alpha = 0.05, mode = "all", all.cor = TRUE){
   # wrapper function to generate plots from Section 2
@@ -197,7 +196,11 @@ network <- function(folder, alpha = 0.05){
     B1s <- setup$B1s
     lf <- lf - 1
     hidden <- setup$hidden
-    print(hidden[1])
+    if(hidden[1] > dim(setup$As)[1]){
+      print("no hiddens")
+    }else{
+      print("with hiddens")
+    }
     hidden_lagged <- setup$hidden_lagged
   }
   
@@ -266,6 +269,7 @@ network <- function(folder, alpha = 0.05){
   LINGAM_bl_perf <- list()
   lin.alpha.inds <- list()
   lin2.alpha.inds <- list()
+  n.vec <- c()
   
   for (s in 1:2){
     if(s == 1){
@@ -286,6 +290,7 @@ network <- function(folder, alpha = 0.05){
       i <- i + 1
       load(paste(folder, "/", file, sep = ""))
       cat("\n", "T: ", simulation$n, "\n")
+      
       z <- simulation$res # z-statistics
       b <- simulation$lingam # lingam results
       b2.pv <- simulation$b2_res
@@ -298,6 +303,7 @@ network <- function(folder, alpha = 0.05){
       
       
       if (s == 1){
+        n.vec <- c(n.vec, simulation$n)
         inst.pv <- pv[,inst.col,] # instantaneous effects
         dimnames(inst.pv)[[2]] <- dimnames(inst.pv)[[1]]
         for (j in 1:p){
@@ -325,6 +331,9 @@ network <- function(folder, alpha = 0.05){
         }
         
         
+        
+        # lingam with boot
+        if(setup$lingBoot){
         lin_pv.adj <- array(1, dim(pv.adj), 
                             dimnames = list(paste0('x', 1:p), paste0('x', 1:p)))
 
@@ -360,12 +369,6 @@ network <- function(folder, alpha = 0.05){
           b_stru.nonanc[,,k,] <- b_stru[,,k,] * non.inst.anc # ancestors not considered
         }
         
-        bl_stru <- bl_stru.anc <- bl_stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], 
-                                                                   1, nsim))
-        bl_stru[] <- apply(b.pv, 3, find.instant.structures, lims = 0.5)
-        bl_stru.anc[,,1,] <- bl_stru[,,1,] * inst.anc # non-ancestors not considered
-        bl_stru.nonanc[,,1,] <- bl_stru[,,1,] * non.inst.anc # ancestors not considered
-
         b2.inst.pv <- b2.pv[,inst.col,] # instantaneous effects
         dimnames(b2.inst.pv)[[2]] <- dimnames(b2.inst.pv)[[1]]
         for (j in 1:p){
@@ -374,7 +377,7 @@ network <- function(folder, alpha = 0.05){
         # multiplicity correction
         b2.pv.adj <- b2.inst.pv
         b2.pv.adj[-hidden, -hidden_lagged, ] <- apply(b2.inst.pv[-hidden, -hidden_lagged, ], 
-                                                   3, function(pv) holm.corr(pv, cut = TRUE))
+                                                      3, function(pv) holm.corr(pv, cut = TRUE))
         
         # lowest p-value for null
         p.min <- pmin(apply(b2.pv.adj * non.inst.anc, 3, min, na.rm = TRUE))
@@ -384,7 +387,7 @@ network <- function(folder, alpha = 0.05){
         
         # find output structures at different alphas
         b2_stru <- b2_stru.anc <- b2_stru.nonanc <- array(NA, dim = c(dim(b2.pv.adj)[1:2], 
-                                                             length(b2.lims), nsim))
+                                                                      length(b2.lims), nsim))
         b2_stru[] <- apply(b2.pv.adj, 3, find.instant.structures, lims = b2.lims)
         
         for (k in 1:length(b2.lims)){
@@ -392,53 +395,35 @@ network <- function(folder, alpha = 0.05){
           b2_stru.nonanc[,,k,] <- b2_stru[,,k,] * non.inst.anc # ancestors not considered
         }
         
-        # power and FWER
-        pwr <- apply(stru.anc, 3, mean, na.rm = TRUE)
-        FWER <- apply(apply(stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
-        
         b_pwr <- apply(b_stru.anc, 3, mean, na.rm = TRUE)
         b_FWER <- apply(apply(b_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
-        
-        bl_pwr <- apply(bl_stru.anc, 3, mean, na.rm = TRUE)
-        bl_FWER <- apply(apply(bl_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
         
         b2_pwr <- apply(b2_stru.anc, 3, mean, na.rm = TRUE)
         b2_FWER <- apply(apply(b2_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
         
-        TAR_bl[i, ] <- c(bl_pwr, bl_FWER)
         TAR_lingam[1:length(lev),c(i, lf + i)] <- c(b_pwr, b_FWER)
         TAR_lingam2[1:length(b2.lims),c(i, lf + i)] <- c(b2_pwr, b2_FWER)
-        TAR[1:length(lims),c(i, lf + i)] <- c(FWER, pwr)
-      } else if (s == 2){
-        # summary effects
-        b2.sum.pv <- b2.pv[,inst.col,]
-        dimnames(b2.sum.pv)[[2]] <- dimnames(b2.sum.pv)[[1]]
-
-        # get summary p-values
-        b2.sum.pv[] <- apply(b2.pv, 3, summary.p.val)
-        # multiplicity correction
-        b2.pv.adj <- b2.sum.pv
-        b2.pv.adj[-hidden, -hidden_lagged, ] <- apply(b2.sum.pv[-hidden, -hidden_lagged, ], 
-                                                   3, function(pv) holm.corr(pv, cut = TRUE))
-        
-        # lowest p-value for null        
-        p.min <- pmin(apply(b2.pv.adj * non.anc, 3, min, na.rm = TRUE))
-        b2.lims <- sort(unique(c(0, alpha, p.min)))
-        b2.lims <- b2.lims[is.finite(b2.lims)]
-
-        lin2.alpha.ind[i] <- which(b2.lims == alpha)
-        
-        # find output structures at different alphas
-        b2_stru <- b2_stru.anc <- b2_stru.nonanc <- array(NA, dim = c(dim(b2.pv.adj)[1:2], 
-                                                             length(b2.lims), nsim))
-        b2_stru[] <- apply(b2.pv.adj, 3, find.structures, lims = b2.lims)
-
-        for (k in 1:length(b2.lims)){
-          b2_stru.anc[,,k,] <- b2_stru[,,k,] * all.anc # non-ancestors not considered
-          b2_stru.nonanc[,,k,] <- b2_stru[,,k,] * non.anc # ancestors not considered
         }
         
-        #lin2
+        # classic lingam without lag
+        bl_stru <- bl_stru.anc <- bl_stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], 
+                                                                   1, nsim))
+        bl_stru[] <- apply(b.pv, 3, find.instant.structures, lims = 0.5)
+        bl_stru.anc[,,1,] <- bl_stru[,,1,] * inst.anc # non-ancestors not considered
+        bl_stru.nonanc[,,1,] <- bl_stru[,,1,] * non.inst.anc # ancestors not considered
+        
+        # power and FWER
+        pwr <- apply(stru.anc, 3, mean, na.rm = TRUE)
+        FWER <- apply(apply(stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
+        
+        bl_pwr <- apply(bl_stru.anc, 3, mean, na.rm = TRUE)
+        bl_FWER <- apply(apply(bl_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
+        
+        TAR_bl[i, ] <- c(bl_pwr, bl_FWER)
+        TAR[1:length(lims),c(i, lf + i)] <- c(FWER, pwr)
+      } else if (s == 2){
+
+        
         # summary effects
         sum.pv <- pv[,inst.col,]
         dimnames(sum.pv)[[2]] <- dimnames(sum.pv)[[1]]
@@ -467,7 +452,8 @@ network <- function(folder, alpha = 0.05){
           stru.nonanc[,,k,] <- stru[,,k,] * non.anc # ancestors not considered
         }
         
-        
+        # lingam with boot
+        if(setup$lingBoot){
         lin_pv.adj <- array(1, dim(pv.adj), 
                             dimnames = list(paste0('x', 1:p), paste0('x', 1:p)))
         
@@ -502,6 +488,44 @@ network <- function(folder, alpha = 0.05){
           b_stru.nonanc[,,k,] <- b_stru[,,k,] * non.anc
         }
         
+        # summary effects
+        b2.sum.pv <- b2.pv[,inst.col,]
+        dimnames(b2.sum.pv)[[2]] <- dimnames(b2.sum.pv)[[1]]
+        
+        # get summary p-values
+        b2.sum.pv[] <- apply(b2.pv, 3, summary.p.val)
+        # multiplicity correction
+        b2.pv.adj <- b2.sum.pv
+        b2.pv.adj[-hidden, -hidden_lagged, ] <- apply(b2.sum.pv[-hidden, -hidden_lagged, ], 
+                                                      3, function(pv) holm.corr(pv, cut = TRUE))
+        
+        # lowest p-value for null        
+        p.min <- pmin(apply(b2.pv.adj * non.anc, 3, min, na.rm = TRUE))
+        b2.lims <- sort(unique(c(0, alpha, p.min)))
+        b2.lims <- b2.lims[is.finite(b2.lims)]
+        
+        lin2.alpha.ind[i] <- which(b2.lims == alpha)
+        
+        # find output structures at different alphas
+        b2_stru <- b2_stru.anc <- b2_stru.nonanc <- array(NA, dim = c(dim(b2.pv.adj)[1:2], 
+                                                                      length(b2.lims), nsim))
+        b2_stru[] <- apply(b2.pv.adj, 3, find.structures, lims = b2.lims)
+        
+        for (k in 1:length(b2.lims)){
+          b2_stru.anc[,,k,] <- b2_stru[,,k,] * all.anc # non-ancestors not considered
+          b2_stru.nonanc[,,k,] <- b2_stru[,,k,] * non.anc # ancestors not considered
+        }
+        
+        b_pwr <- apply(b_stru.anc, 3, mean, na.rm = TRUE)
+        b_FWER <- apply(apply(b_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
+        
+        b2_pwr <- apply(b2_stru.anc, 3, mean, na.rm = TRUE)
+        b2_FWER <- apply(apply(b2_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
+        
+        TAR_lingam[1:length(lev),c(i, lf + i)] <- c(b_pwr, b_FWER)
+        TAR_lingam2[1:length(b2.lims),c(i, lf + i)] <- c(b2_pwr, b2_FWER)
+        }
+        
         bl_stru <- bl_stru.anc <- bl_stru.nonanc <- array(NA, dim = c(dim(pv.adj)[1:2], 
                                                                    1, nsim))
         bl_stru[] <- apply(b.pv, 3, find.structures, lims = 0.5)
@@ -511,19 +535,14 @@ network <- function(folder, alpha = 0.05){
         # power and FWER
         pwr <- apply(stru.anc, 3, mean, na.rm = TRUE)
         FWER <- apply(apply(stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
-
-        b_pwr <- apply(b_stru.anc, 3, mean, na.rm = TRUE)
-        b_FWER <- apply(apply(b_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
         
         bl_pwr <- apply(bl_stru.anc, 3, mean, na.rm = TRUE)
         bl_FWER <- apply(apply(bl_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
         
-        b2_pwr <- apply(b2_stru.anc, 3, mean, na.rm = TRUE)
-        b2_FWER <- apply(apply(b2_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
+
         
         TAR_bl[i, ] <- c(bl_pwr, bl_FWER)
-        TAR_lingam[1:length(lev),c(i, lf + i)] <- c(b_pwr, b_FWER)
-        TAR_lingam2[1:length(b2.lims),c(i, lf + i)] <- c(b2_pwr, b2_FWER)
+
         TAR[1:length(lims),c(i, lf + i)] <- c(FWER, pwr)
       } else {
         stop("Wrong type")
@@ -538,16 +557,23 @@ network <- function(folder, alpha = 0.05){
     lin.alpha.inds[[s]] <- lin.alpha.ind
     lin2.alpha.inds[[s]] <- lin2.alpha.ind
   }
-  
-  par(mfrow = c(3,2))
+  # lingam with boot
+  if(setup$lingBoot){
+    par(mfrow = c(3,2))
+  }else{
+    par(mfrow = c(1,2))
+  }
+  main <- c('Instantaneous effecs', "Summary graph")
   for (s in 1:2){
     # read off from lists
     TAR <- TARs[[s]]
     alpha.ind <- alpha.inds[[s]]
     # plot ROC
     matplot(TAR[-1,1:lf], TAR[-1,lf + (1:lf)], type = "s",
-            xlim = c(0, max(c(TAR[,1:lf]), na.rm = TRUE)), ylim = c(0,1), xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
-            col = (1:p)[-5], las = 1, main = "Ancestor")
+            xlim = c(0, max(c(TAR[,1:lf], 1), na.rm = TRUE)), ylim = c(0,1), 
+            xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
+            col = (1:p)[-5], las = 1)
+    title(main[s], cex.main = 0.9)
     # add performance at alpha
     points(diag(TAR[alpha.ind,1:lf]), diag(TAR[alpha.ind,lf + (1:lf)]),
            col = (1:p)[-5], pch = 3)
@@ -557,8 +583,15 @@ network <- function(folder, alpha = 0.05){
       # add performance of simple pruned lingam
       points(x = LINGAM_bl_perf[[s]][, 2], y = LINGAM_bl_perf[[s]][, 1],
              col = (1:p)[-5], pch = 2)
+      legend("bottomright", legend = c("LiNGAM", expression(alpha ~ "= 0.05")), 
+             pch = 2:3, cex = 0.6)
+    }else{
+      legend("bottomright", legend = paste0("n = ", n.vec), 
+             col = (1:p)[-5], lty = (1:p)[-5], cex = 0.6)
     }
   }
+  # lingam with boot
+  if(setup$lingBoot){
   for (s in 1:2){
     # read off from lists
     TAR <- LINGAM_perf[[s]]
@@ -599,13 +632,22 @@ network <- function(folder, alpha = 0.05){
             col = (1:p)[-5], pch = 2)
     }
   }
+  }
 }
 
-# png(paste(savefolder, "/ROC-graph-noleg.png", sep = ""), width = 600 * plotfac,
-# height = 300 * plotfac, res = 75 * plotfac)
-# network(folder)
-# dev.off()
+flz <- list.files("results")
 
+for(folder in flz){
+  savefolder <- "Figures/"
+  if(grepl("no", folder, fixed = TRUE)){
+    hfac <- 1
+  }else{
+    hfac <- 3
+  }
+  png(paste(savefolder, folder, ".png", sep = ""), width = 600 * plotfac,
+      height = 300 * plotfac * hfac, res = 75 * plotfac)
+  network(paste0("results/", folder))
+  dev.off()
+}
 
-network('results/test')
 
