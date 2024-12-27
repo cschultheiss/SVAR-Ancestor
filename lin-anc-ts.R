@@ -85,19 +85,9 @@ lingam2.anc.ts <- function(x, degree, targets = colnames(x), n_boot = 100){
   source("VARLiNGAM/sourcedir.R")
   source("VARLiNGAM/main1.R")
   sourceDir("VARLiNGAM/", FALSE)
-  sourceDir("VARLiNGAM/lingam/code", FALSE)
-  # function to perform ancestor regression for SVAR
-  # Input
-  # x (numeric, matrix): the observational data
-  # degree (integer): order of the SVAR process to be considered
-  # targets (character, vector): variables whose ancestors should be estimated, all by default
-  # f (function): non-linearity used for ancestor regression
-  # Output
-  # z.val (numeric, matrix): test statistics
-  # p.val (numeric, matrix): p-values
-  dat <- tsdata2canonicalform(x, degree)
-  res <- VARLiNGAM(dat, pruning = TRUE, ntests = FALSE)
-  return(res)
+  dat <- tsdata2canonicalform(x,degree)
+  VARres <- VAR_estim(dat, "ols", FALSE, NA, FALSE)
+  return(pcalg::lingam(VARres$residuals)$Bpruned)
 }
 
 lingam3.anc.ts <- function(x, degree, targets = colnames(x), n_boot = 100){

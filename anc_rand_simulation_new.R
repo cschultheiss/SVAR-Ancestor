@@ -16,7 +16,7 @@ sample.rand.dist <- function(n, type.vec = 1:6){
 
 
 rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6, 
-                            mc.cores = 16, h = 0){
+                            mc.cores = 16, h = 0, lingBoot = TRUE){
   # when called executes the simulation for Section 4
   # Input
   # nsim (integer): number of simulation runs per sample size
@@ -105,7 +105,7 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
     hidden <- matrix(p+1, nrow = nsim)
     hidden_lagged <- hidden
   }
-  setup <- list(As = As, B1s = B1s, hidden = hidden, hidden_lagged = hidden_lagged)
+  setup <- list(As = As, B1s = B1s, hidden = hidden, hidden_lagged = hidden_lagged, lingBoot = lingBoot)
   
   resname <- paste0("setup ", format(Sys.time(), "%d-%b-%Y %H.%M"))
   if (save) save(setup, file = paste("results/", newdir, "/", resname, ".RData", sep = ""))
@@ -124,7 +124,7 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
     tic()
     res<-foreach(gu = 1:nsim, .combine = rbind,
                  .packages = c("tsutils"), .options.snow = opts) %dorng%{
-                   psi <- sample.rand.dist(n, sample(1:6, p, replace = T)) # get noise
+                   psi <- sample.rand.dist(n, sample(1:6, p, replace = (p != 6))) # get noise
                    
                    x <- psi
                    # generate data from SVAR
@@ -136,13 +136,20 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
                    x <- x[-(1:n.init),] # discard burn-in
                     
                    laa <- lin.anc.ts(x[, -hidden[gu, ]], degree = nlag) # apply ancestor regression
-                   Lin_laa <- lingam.anc.ts(x[, -hidden[gu, ]], degree = nlag, n_boot = 100)
                    Lin <- lingam2.anc.ts(x[, -hidden[gu, ]], degree = nlag)
-                   Lin3 <- lingam3.anc.ts(x[, -hidden[gu, ]], degree = nlag, n_boot = 100)
+
+                   if(lingBoot){
+                    Lin_laa <- lingam.anc.ts(x[, -hidden[gu, ]], degree = nlag, n_boot = 100)
+                    Lin3 <- lingam3.anc.ts(x[, -hidden[gu, ]], degree = nlag, n_boot = 100)
+                   }else{
+                    Lin_laa <- list()
+                    Lin3 <- array(NA, dim = dim(laa[[1]]))
+                   }
+
                    
                    if(h == 0){
                      z.val <- laa[[1]]
-                     b.val <- Lin$Bhat[[1]]
+                     b.val <- Lin
                      b2.val <- Lin3
                    }else{
                     z.val <- matrix(0, nrow = p, ncol = p * (1 + nlag))
@@ -151,7 +158,7 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
                     row.names(z.val) <- paste0('x', 1:p)
                     
                     b.val <- matrix(0, nrow = p, ncol = p)
-                    b.val[-hidden[gu, ], -hidden[gu, ]] <- Lin$Bhat[[1]]
+                    b.val[-hidden[gu, ], -hidden[gu, ]] <- Lin
                     colnames(b.val) <- paste0('x', 1:p)
                     row.names(b.val) <- paste0('x', 1:p)
                     
@@ -168,7 +175,6 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
                    out$gu <- gu
                    out$b_res <- b.val
                    out$lingam <- Lin_laa
-                   out$df <- Lin_laa$df
                    out$b2_res <- b2.val
                    out                           
                  } 
@@ -210,4 +216,4 @@ rand_simulation <- function(nsim = 1000, n.vec = 10^(2:6), n.init = 10^4, p = 6,
   return(paste("results/", newdir, sep = ""))
 }
 
-rand_simulation(mc.cores = 125, p = 10, h = 1)
+rand_simulation(mc.cores = 125, p = 50, h = 1, lingBoot = FALSE, n.vec = 10^(3:6))

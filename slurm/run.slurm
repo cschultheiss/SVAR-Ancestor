@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --time=150:00:00
-#SBATCH --job-name="sim101"
-#SBATCH --mem-per-cpu=3GB
-#SBATCH --output=outfiles/sim101.out
+#SBATCH --job-name="sim50_1_no"
+#SBATCH --mem-per-cpu=8GB
+#SBATCH --output=outfiles/sim50_1_no.out
 #SBATCH --cpus-per-task=128
 
 module load stack/2024-06  gcc/12.2.0

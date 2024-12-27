@@ -77,7 +77,7 @@ estimate <- function( X ) {
   # approximately strictly lower triangular matrix
   cat('Performing permutation for causal order...\n');
 
-  if (dims <= 8) {  
+  if (dims <= 50) {  
     cat('(Small dimensionality, using brute-force method.)\n');
     temp <- sltbruteforce( Best )
     Bestcausal <- temp$Bopt
