@@ -636,6 +636,8 @@ network <- function(folder, alpha = 0.05){
 }
 
 flz <- list.files("results")
+flz <- c("27-Dec-2024 10.51", "50_0_no", "50_1_no")
+
 
 for(folder in flz){
   savefolder <- "Figures/"

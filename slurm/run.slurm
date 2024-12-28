@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --time=150:00:00
 #SBATCH --job-name="sim50_1_no"
-#SBATCH --mem-per-cpu=8GB
+#SBATCH --mem-per-cpu=15GB
 #SBATCH --output=outfiles/sim50_1_no.out
 #SBATCH --cpus-per-task=128
 
