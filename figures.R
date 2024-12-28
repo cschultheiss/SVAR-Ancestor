@@ -599,13 +599,13 @@ network <- function(folder, alpha = 0.05){
     # plot ROC
     matplot(TAR[-1,1:lf], TAR[-1,lf + (1:lf)], type = "s",
             xlim = c(0, max(c(TAR[,1:lf]), na.rm = TRUE)), ylim = c(0,1), xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
-            col = (1:p)[-5], las = 1, main = 'LINGAM')
+            col = (1:p)[-5], las = 1)
     # add performance at alpha
     points(diag(TAR[alpha.ind,1:lf]), diag(TAR[alpha.ind,lf + (1:lf)]),
            col = (1:p)[-5], pch = 3) 
     # plot target alpha
     lines(c(alpha, alpha), c(0, 1), col = "gray", lty = 2)
-    
+    title(main[s], cex.main = 0.9)
     if(s == 1){
     # add performance of simple pruned lingam
     points(x = LINGAM_bl_perf[[s]][, 2], y = LINGAM_bl_perf[[s]][, 1],
@@ -619,25 +619,28 @@ network <- function(folder, alpha = 0.05){
     # plot ROC
     matplot(TAR[-1,1:lf], TAR[-1,lf + (1:lf)], type = "s",
             xlim = c(0, max(c(TAR[,1:lf]), na.rm = TRUE)), ylim = c(0,1), xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
-            col = (1:p)[-5], las = 1, main = 'LINGAM')
+            col = (1:p)[-5], las = 1)
     # add performance at alpha
     points(diag(TAR[alpha.ind,1:lf]), diag(TAR[alpha.ind,lf + (1:lf)]),
            col = (1:p)[-5], pch = 3) 
     # plot target alpha
     lines(c(alpha, alpha), c(0, 1), col = "gray", lty = 2)
-    
+    title(main[s], cex.main = 0.9)
     if(s == 1){
       # add performance of simple pruned lingam
       points(x = LINGAM_bl_perf[[s]][, 2], y = LINGAM_bl_perf[[s]][, 1],
             col = (1:p)[-5], pch = 2)
     }
   }
+    mtext('Ancestor', side =3, line = -2, outer = TRUE)
+    mtext('SVAR-LiNGAM 1', side =3, line = -32, outer = TRUE)
+    mtext('SVAR-LiNGAM 2', side =3, line = -62, outer = TRUE)
   }
 }
 
 flz <- list.files("results")
 flz <- c("27-Dec-2024 10.51", "50_0_no", "50_1_no")
-
+flz <- "6_0"
 
 for(folder in flz){
   savefolder <- "Figures/"
