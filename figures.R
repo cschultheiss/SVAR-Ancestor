@@ -293,7 +293,7 @@ network <- function(folder, alpha = 0.05){
       
       z <- simulation$res # z-statistics
       b <- simulation$lingam # lingam results
-      b2.pv <- simulation$b2_res
+      b2.pv <- simulation$b2_res # lingam boot results
       dimnames(b2.pv) <- list(paste0('x', 1:p), paste0('x', 1:p, '.', rep(0:1, each = p)))
       
       pv <- 2 * pnorm(-abs(z)) # p-values
@@ -330,9 +330,9 @@ network <- function(folder, alpha = 0.05){
           stru.nonanc[,,k,] <- stru[,,k,] * non.inst.anc # ancestors not considered
         }
         
-        
-        
-        # lingam with boot
+        # lingam with boot as in section 6 in 
+        # - A. Hyvärinen, K. Zhang, S. Shimizu, P.O. Hoyer (JMLR-2010). Estimation of
+        #   a Structural Vector Autoregression Model Using Non-Gaussianity
         if(setup$lingBoot){
         lin_pv.adj <- array(1, dim(pv.adj), 
                             dimnames = list(paste0('x', 1:p), paste0('x', 1:p)))
@@ -342,7 +342,9 @@ network <- function(folder, alpha = 0.05){
           S0.boot <- b[[run]][['S0.boot']]          
           
           n.boot <- dim(S0.boot)[3]
-            
+          
+          # p-value 
+          # number of bootstrap statistics that are higher or equal to the initial
           lin.pv <- matrix(rowMeans(sapply(1:n.boot, function(boot){
             S0.boot[, , boot] >= S0
           })), ncol = ncol(S0))
@@ -369,6 +371,9 @@ network <- function(folder, alpha = 0.05){
           b_stru.nonanc[,,k,] <- b_stru[,,k,] * non.inst.anc # ancestors not considered
         }
         
+        # lingam with boot as in
+        # A. Moneta, D. Entner, P.O. Hoyer, and A. Coad; Causal Inference by Independent 
+        # Component Analysis: Theory and Applications (OBES 2013)
         b2.inst.pv <- b2.pv[,inst.col,] # instantaneous effects
         dimnames(b2.inst.pv)[[2]] <- dimnames(b2.inst.pv)[[1]]
         for (j in 1:p){
@@ -395,6 +400,7 @@ network <- function(folder, alpha = 0.05){
           b2_stru.nonanc[,,k,] <- b2_stru[,,k,] * non.inst.anc # ancestors not considered
         }
         
+        # power and FWER
         b_pwr <- apply(b_stru.anc, 3, mean, na.rm = TRUE)
         b_FWER <- apply(apply(b_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
         
@@ -451,8 +457,10 @@ network <- function(folder, alpha = 0.05){
           stru.anc[,,k,] <- stru[,,k,] * all.anc # non-ancestors not considered
           stru.nonanc[,,k,] <- stru[,,k,] * non.anc # ancestors not considered
         }
-        
-        # lingam with boot
+
+        # lingam with boot as in section 6 in 
+        # - A. Hyvärinen, K. Zhang, S. Shimizu, P.O. Hoyer (JMLR-2010). Estimation of
+        #   a Structural Vector Autoregression Model Using Non-Gaussianity
         if(setup$lingBoot){
         lin_pv.adj <- array(1, dim(pv.adj), 
                             dimnames = list(paste0('x', 1:p), paste0('x', 1:p)))
@@ -463,6 +471,8 @@ network <- function(folder, alpha = 0.05){
           
           n.boot <- dim(S0.boot)[3]
           
+          # p-value 
+          # number of bootstrap statistics that are higher or equal to the initial
           lin.pv <- matrix(rowMeans(sapply(1:n.boot, function(boot){
             Slag.boot[, , boot] >= Slag
           })), ncol = ncol(Slag))
@@ -488,6 +498,9 @@ network <- function(folder, alpha = 0.05){
           b_stru.nonanc[,,k,] <- b_stru[,,k,] * non.anc
         }
         
+        # lingam with boot as in
+        # A. Moneta, D. Entner, P.O. Hoyer, and A. Coad; Causal Inference by Independent 
+        # Component Analysis: Theory and Applications (OBES 2013)
         # summary effects
         b2.sum.pv <- b2.pv[,inst.col,]
         dimnames(b2.sum.pv)[[2]] <- dimnames(b2.sum.pv)[[1]]
@@ -516,6 +529,7 @@ network <- function(folder, alpha = 0.05){
           b2_stru.nonanc[,,k,] <- b2_stru[,,k,] * non.anc # ancestors not considered
         }
         
+        # power and FWER
         b_pwr <- apply(b_stru.anc, 3, mean, na.rm = TRUE)
         b_FWER <- apply(apply(b_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
         
@@ -538,8 +552,6 @@ network <- function(folder, alpha = 0.05){
         
         bl_pwr <- apply(bl_stru.anc, 3, mean, na.rm = TRUE)
         bl_FWER <- apply(apply(bl_stru.nonanc, 3:4, max, na.rm = TRUE) == 1, 1, mean)
-        
-
         
         TAR_bl[i, ] <- c(bl_pwr, bl_FWER)
 
@@ -598,6 +610,7 @@ network <- function(folder, alpha = 0.05){
              col = line_col, lty = line_col, cex = 0.6, pch = lingam_pch)
     }
   }
+  
   # lingam with boot
   if(setup$lingBoot){
   for (s in 1:2){
@@ -646,10 +659,8 @@ network <- function(folder, alpha = 0.05){
   }
 }
 
+# generate plots for all results
 flz <- list.files("results")
-#flz <- c("6_0_no", "50_0_no")
-#flz <- c("27-Dec-2024 10.51", "26-Dec-2024 18.20") #6_1 and 6_0
-
 for(folder in flz){
   savefolder <- "Figures/"
   if(grepl("no", folder, fixed = TRUE)){

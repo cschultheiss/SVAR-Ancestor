@@ -66,15 +66,25 @@ lingam.anc.ts <- function(x, degree, targets = colnames(x), n_boot = 100){
   source("VARLiNGAM/main1.R")
   sourceDir("VARLiNGAM/", FALSE)
   sourceDir("VARLiNGAM/lingam/code", FALSE)
-  # function to perform ancestor regression for SVAR
+  # code from https://sites.google.com/site/dorisentner/publications/VARLiNGAM
+  # A. Moneta, D. Entner, P.O. Hoyer, and A. Coad; Causal Inference by Independent 
+  # Component Analysis: Theory and Applications (OBES 2013)
+  
+  # Function to perform LiNGAM for SVAR with boosting to estimate causal effect
+  # as in section 6 in 
+  # - A. Hyvärinen, K. Zhang, S. Shimizu, P.O. Hoyer (JMLR-2010). Estimation of
+  #   a Structural Vector Autoregression Model Using Non-Gaussianity
+  
   # Input
   # x (numeric, matrix): the observational data
   # degree (integer): order of the SVAR process to be considered
   # targets (character, vector): variables whose ancestors should be estimated, all by default
-  # f (function): non-linearity used for ancestor regression
+  # n_boot (integer): number of bootstrap samples
   # Output
-  # z.val (numeric, matrix): test statistics
-  # p.val (numeric, matrix): p-values
+  # S0: initial significance statistic of unpruned instant effects
+  # S0.boot: bootstrap distribution of significance statistic of unpruned instant effects under H0
+  # Slag: initial significance statistic of unpruned laged effects
+  # Slag.boot: bootstrap distribution of significance statistic of unpruned instant effects under H0
   dat <- tsdata2canonicalform(x,degree)
   res <- VARLiNGAM(dat, pruning = FALSE, ntests = FALSE)
   boot_res <- boot_dist(Data = as.data.frame(x), Bhat = res$Bhat, n_boot)
@@ -82,6 +92,19 @@ lingam.anc.ts <- function(x, degree, targets = colnames(x), n_boot = 100){
 }
 
 lingam2.anc.ts <- function(x, degree, targets = colnames(x), n_boot = 100){
+  # code from https://sites.google.com/site/dorisentner/publications/VARLiNGAM
+  # A. Moneta, D. Entner, P.O. Hoyer, and A. Coad; Causal Inference by Independent 
+  # Component Analysis: Theory and Applications (OBES 2013)
+  
+  # Function to perform LiNGAM for SVAR for instant effects only
+  
+  # Input
+  # x (numeric, matrix): the observational data
+  # degree (integer): order of the SVAR process to be considered
+  # targets (character, vector): variables whose ancestors should be estimated, all by default
+  # n_boot (integer): number of bootstrap samples
+  # Output
+  # pruned instant effects
   source("VARLiNGAM/sourcedir.R")
   source("VARLiNGAM/main1.R")
   sourceDir("VARLiNGAM/", FALSE)
@@ -95,15 +118,19 @@ lingam3.anc.ts <- function(x, degree, targets = colnames(x), n_boot = 100){
   source("VARLiNGAM/main1.R")
   sourceDir("VARLiNGAM/", FALSE)
   sourceDir("VARLiNGAM/lingam/code", FALSE)
-  # function to perform ancestor regression for SVAR
+  # code from https://sites.google.com/site/dorisentner/publications/VARLiNGAM
+  # A. Moneta, D. Entner, P.O. Hoyer, and A. Coad; Causal Inference by Independent 
+  # Component Analysis: Theory and Applications (OBES 2013)
+  
+  # Function to perform LiNGAM for SVAR with boosting to estimate p-values for causal effects
+  
   # Input
   # x (numeric, matrix): the observational data
   # degree (integer): order of the SVAR process to be considered
   # targets (character, vector): variables whose ancestors should be estimated, all by default
-  # f (function): non-linearity used for ancestor regression
+  # n_boot (integer): number of bootstrap samples
   # Output
-  # z.val (numeric, matrix): test statistics
-  # p.val (numeric, matrix): p-values
+  # p-values from the bootstrapping t-distribution
   dat <- tsdata2canonicalform(x,degree)
   res <- VARLiNGAM(dat, pruning = FALSE, ntests = FALSE)
   boot_res <- boot_sd(Data = as.data.frame(x), cons = res$const, Ahat = res$Mhat, 
