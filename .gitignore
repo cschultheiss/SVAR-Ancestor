@@ -5,7 +5,7 @@
 *.Rproj
 .sync.ffs_db
 outfiles
-results
+results*
 Figures
 unused
 *.csv

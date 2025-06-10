@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=150:00:00
+#SBATCH --time=00:45:00
 #SBATCH --job-name="fig"
 #SBATCH --mem-per-cpu=150GB
 #SBATCH --output=outfiles/fig.out
