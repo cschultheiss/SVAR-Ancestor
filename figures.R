@@ -563,7 +563,15 @@ network <- function(folder, alpha = 0.05){
   }else{
     par(mfrow = c(1,2))
   }
-  main <- c('Instantaneous effecs', "Summary graph")
+  main <- c('Instantaneous effects', "Summary graph")
+
+  line_col <- (1:p)[-5]
+  lingam_pch <- (1:p)[-3]
+  if((length(flz) < 6) & grepl("no", folder, fixed = TRUE)){
+    line_col <- (2:p)[-4]
+    lingam_pch <- (2:p)[-2]
+  }
+
   for (s in 1:2){
     # read off from lists
     TAR <- TARs[[s]]
@@ -572,22 +580,22 @@ network <- function(folder, alpha = 0.05){
     matplot(TAR[-1,1:lf], TAR[-1,lf + (1:lf)], type = "s",
             xlim = c(0, max(c(TAR[,1:lf], 1), na.rm = TRUE)), ylim = c(0,1), 
             xlab = "Type I FWER", ylab ="Fraction of detected ancestors",
-            col = (1:p)[-5], las = 1)
+            col = line_col, las = 1)
     title(main[s], cex.main = 0.9)
     # add performance at alpha
     points(diag(TAR[alpha.ind,1:lf]), diag(TAR[alpha.ind,lf + (1:lf)]),
-           col = (1:p)[-5], pch = 3)
+           col = line_col, pch = 3)
     # plot target alpha
     lines(c(alpha, alpha), c(0, 1), col = "gray", lty = 2)
     if(s == 1){
       # add performance of simple pruned lingam
       points(x = LINGAM_bl_perf[[s]][, 2], y = LINGAM_bl_perf[[s]][, 1],
-             col = (1:p)[-5], pch = 2)
-      legend("bottomright", legend = c("LiNGAM", expression(alpha ~ "= 0.05")), 
-             pch = 2:3, cex = 0.6)
+             col = line_col, pch = lingam_pch)
+      #legend("bottomright", legend = c("LiNGAM", expression(alpha ~ "= 0.05")), 
+      #       pch = 2:3, cex = 0.6)
     }else{
-      legend("bottomright", legend = paste0("n = ", n.vec), 
-             col = (1:p)[-5], lty = (1:p)[-5], cex = 0.6)
+      legend("bottomright", legend = paste0("T = ", n.vec), 
+             col = line_col, lty = line_col, cex = 0.6, pch = lingam_pch)
     }
   }
   # lingam with boot
@@ -639,8 +647,8 @@ network <- function(folder, alpha = 0.05){
 }
 
 flz <- list.files("results")
-flz <- c("27-Dec-2024 10.51", "50_0_no", "50_1_no")
-flz <- "6_0"
+#flz <- c("6_0_no", "50_0_no")
+#flz <- c("27-Dec-2024 10.51", "26-Dec-2024 18.20") #6_1 and 6_0
 
 for(folder in flz){
   savefolder <- "Figures/"
@@ -656,3 +664,4 @@ for(folder in flz){
 }
 
 
+folder <- "results/6_0_no"
